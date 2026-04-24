@@ -496,7 +496,7 @@ input,select,textarea,button{font-family:'Poppins',sans-serif;}
             <div class="sec-title">Atendimento urgente <span class="sec-badge">2</span></div>
           </div>
           <div class="urgente-list">
-            <div class="urgente-card" onclick="openPanel(4)">
+            <div class="urgente-card" onclick="openPanel('4')">
               <div class="u-av" style="background:rgba(200,212,0,0.1);border:1px solid rgba(200,212,0,0.2);color:var(--accent)">LR</div>
               <div class="u-info">
                 <div class="u-name">Logistica Rapida</div>
@@ -505,10 +505,10 @@ input,select,textarea,button{font-family:'Poppins',sans-serif;}
               </div>
               <div class="u-actions">
                 <button class="wbtn" onclick="event.stopPropagation();window.open('https://wa.me/5511966669999','_blank')">WhatsApp</button>
-                <button class="mbtn" onclick="event.stopPropagation();openPanel(4)">Ver lead</button>
+                <button class="mbtn" onclick="event.stopPropagation();openPanel('4')">Ver lead</button>
               </div>
             </div>
-            <div class="urgente-card stale" onclick="openPanel(5)">
+            <div class="urgente-card stale" onclick="openPanel('5')">
               <div class="u-av" style="background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.2);color:var(--red)">CB</div>
               <div class="u-info">
                 <div class="u-name">Clinica Bem Estar</div>
@@ -517,7 +517,7 @@ input,select,textarea,button{font-family:'Poppins',sans-serif;}
               </div>
               <div class="u-actions">
                 <button class="wbtn" onclick="event.stopPropagation();window.open('https://wa.me/5511955553333','_blank')">WhatsApp</button>
-                <button class="mbtn" onclick="event.stopPropagation();openPanel(5)">Ver lead</button>
+                <button class="mbtn" onclick="event.stopPropagation();openPanel('5')">Ver lead</button>
               </div>
             </div>
           </div>
@@ -720,7 +720,7 @@ function renderBoard(){
     const cards=cl.map(l=>{
       const stale=diasAtras(l.data)>3&&l.status!=='fechado'&&l.status!=='perdido';
       const v=VAL[l.int];
-      return`<div class="card${stale?' stale':''}${col.id==='fechado'?' closed':''}" draggable="true" data-id="${l.id}" onclick="openPanel(${l.id})">
+      return`<div class="card${stale?' stale':''}${col.id==='fechado'?' closed':''}" draggable="true" data-id="${l.id}" onclick="openPanel('${l.id}')">
         <div class="card-name">${l.nome}</div>
         <div class="card-seg">${l.seg||'Segmento não definido'}</div>
         <div class="card-time">${l.data}<span>${l.hora}</span></div>
@@ -747,7 +747,7 @@ function renderBoard(){
 
 function setupDrag(){
   document.querySelectorAll('.card').forEach(c=>{
-    c.addEventListener('dragstart',e=>{dragId=parseInt(c.dataset.id);setTimeout(()=>c.classList.add('dragging'),0);e.dataTransfer.effectAllowed='move';});
+    c.addEventListener('dragstart',e=>{dragId=c.dataset.id;setTimeout(()=>c.classList.add('dragging'),0);e.dataTransfer.effectAllowed='move';});
     c.addEventListener('dragend',()=>c.classList.remove('dragging'));
   });
   document.querySelectorAll('.col').forEach(col=>{
@@ -756,15 +756,7 @@ function setupDrag(){
     col.addEventListener('drop',e=>{
       e.preventDefault();col.classList.remove('drag-over-col');
       const ns=col.dataset.col;
-      const l=leads.find(x=>x.id===dragId);
-      if(l&&l.status!==ns){
-        const label=COLS.find(c=>c.id===ns).label;
-        l.hist.push(`${hoje()} ${agora()} — Movido para ${label}`);
-        l.status=ns;
-        renderBoard();
-        updateBadge();
-        if(activeId===dragId)openPanel(dragId);
-      }
+      if(dragId&&ns){moveLeadDB(dragId,ns);}
     });
   });
 }

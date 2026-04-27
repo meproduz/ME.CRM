@@ -149,16 +149,16 @@ input,select,textarea,button{font-family:'Poppins',sans-serif;}
 .col{background:var(--bg2);border-radius:12px;padding:12px;min-height:400px;transition:background 0.15s;}
 .col.drag-over-col{background:#1a1a1a;outline:1px dashed rgba(200,212,0,0.3);}
 .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.col-name{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+.col-name{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;}
 .col-count{font-size:10px;background:var(--bg3);border-radius:20px;padding:2px 8px;color:var(--text3);}
-.col-money{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:10px;}
-.col-money.g{color:var(--green);}
+.col-money{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;padding:6px 10px;background:rgba(200,212,0,0.08);border-radius:8px;border:1px solid rgba(200,212,0,0.15);display:inline-block;}
+.col-money.g{color:var(--green);background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.15);}
 .card{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;transition:all 0.15s;}
 .card:hover{border-color:#333;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .card.dragging{opacity:0.3;cursor:grabbing;}
 .card.stale{border-left:2px solid var(--red);}
 .card.closed{border-color:rgba(34,197,94,0.25);}
-.card-name{font-size:12px;font-weight:600;color:#fff;margin-bottom:2px;}
+.card-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;}
 .card-seg{font-size:10px;font-weight:300;color:var(--text3);margin-bottom:5px;}
 .card-time{font-size:10px;font-weight:600;color:var(--accent);margin-bottom:5px;}
 .card-time span{font-weight:300;color:var(--text3);font-size:9px;margin-left:4px;}
@@ -717,10 +717,14 @@ async function moveLeadDB(id,ns){
   const l=leads.find(x=>x.id===id);
   if(!l||l.status===ns)return;
   const label=COLS.find(c=>c.id===ns)?.label||ns;
-  await supa.from('leads').update({status:ns}).eq('id',id);
-  await supa.from('leads_historico').insert({lead_id:id,descricao:`${hoje()} ${agora()} — Movido para ${label}`});
-  await loadLeads();
+  // Atualiza localmente primeiro (otimista)
+  l.status=ns;
+  l.hist=[...l.hist,`${hoje()} ${agora()} — Movido para ${label}`];
+  renderAll();
   if(activeId===id)openPanel(id);
+  // Salva no banco em segundo plano
+  supa.from('leads').update({status:ns}).eq('id',id);
+  supa.from('leads_historico').insert({lead_id:id,descricao:`${hoje()} ${agora()} — Movido para ${label}`});
 }
 
 async function updateLeadField(field,val){
@@ -742,10 +746,14 @@ async function deleteLeadDB(){
 async function saveMeta(){
   const val=parseInt(document.getElementById('meta-input').value);
   if(!val||val<=0){alert('Informe um valor válido');return;}
-  await supa.from('clientes').update({meta_mensal:val}).eq('id',clienteId);
   metaMensal=val;
   renderDashboard();
-  alert('Meta atualizada!');
+  const{error}=await supa.from('clientes').update({meta_mensal:val}).eq('id',clienteId);
+  if(error){console.error(error);alert('Erro ao salvar meta');}
+  else{
+    const btn=document.querySelector('.config-btn');
+    if(btn){const t=btn.textContent;btn.textContent='Salvo!';btn.style.background='#22C55E';setTimeout(()=>{btn.textContent=t;btn.style.background='';},2000);}
+  }
 }
 
 // RENDER

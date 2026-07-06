@@ -95,6 +95,7 @@ export default function GestorPage() {
   const maxFunil = Math.max(...ETAPAS_FUNIL.map(e => e.count), 1);
 
   return (
+    <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
     <div style={{ padding: '28px 24px', maxWidth: 1200, margin: '0 auto' }}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
@@ -450,6 +451,7 @@ export default function GestorPage() {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
+    </div>
     </div>
   );
 }

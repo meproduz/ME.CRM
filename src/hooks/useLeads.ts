@@ -122,7 +122,11 @@ export function useLeads() {
   const moveLead = useCallback(async (leadId: string, novoStatus: string, motivo?: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
     if (!lead) return;
-    await supabase.from('leads').update({ status: novoStatus, status_changed_at: new Date().toISOString() }).eq('id', leadId);
+    const now = new Date().toISOString();
+    // Salva status + status_changed_at + motivo_perda (se houver) em uma única chamada
+    const updatePayload: Record<string, unknown> = { status: novoStatus, status_changed_at: now };
+    if (motivo && novoStatus === 'perdido') updatePayload.motivo_perda = motivo;
+    await supabase.from('leads').update(updatePayload).eq('id', leadId);
     const LABELS: Record<string, string> = {
       novo: 'Novo', contato: 'Em contato', proposta: 'Proposta',
       negociacao: 'Negociação', fechado: 'Fechado ✅', perdido: 'Perdido',
@@ -133,14 +137,19 @@ export function useLeads() {
       lead_id: leadId,
       descricao: entry,
       tipo: 'status_change',
-      meta_json: { from: lead.status, to: novoStatus, at: new Date().toISOString() },
+      meta_json: { from: lead.status, to: novoStatus, at: now },
     });
     if (motivo) {
       const motivoEntry = `📝 ${hoje()} ${agora()} — Motivo de perda: ${motivo}`;
       await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: motivoEntry, tipo: 'anotacao' });
       dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry: motivoEntry } });
     }
-    dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, status: novoStatus as LeadStatus } });
+    dispatch({ type: 'UPDATE_LEAD', payload: {
+      ...lead,
+      status: novoStatus as LeadStatus,
+      status_changed_at: now,
+      ...(motivo && novoStatus === 'perdido' ? { motivo_perda: motivo } : {}),
+    }});
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
   }, [state.leads, dispatch]);
 

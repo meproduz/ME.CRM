@@ -47,18 +47,18 @@ export interface EtapaMetric {
   cor: string;
   count: number;
   valor: number;
-  pctLeads: number;     // % do total de leads ativos
-  pctConversao: number; // % que chegou aqui vindo da etapa anterior
+  pctLeads: number;
+  pctConversao: number;
   forecastPonderado: number;
-  tempoMedioHoras: number | null; // null = sem dados suficientes
+  tempoMedioHoras: number | null;
 }
 
 export interface MesMetric {
-  label: string;       // "Jun 2026"
+  mes: string;
   leads: number;
   fechados: number;
   receita: number;
-  conversao: number;   // 0-100
+  conversao: number;
 }
 
 export interface OrigemMetric {
@@ -81,36 +81,27 @@ export interface AlertaLead { id: string; nome: string; status: string; diasPara
 export interface AlertaFollowup { id: string; nome: string; followup: string; diasAtraso: number; }
 
 export interface GestorMetrics {
-  // KPIs mês atual
   leadsNoMes: number;
   fechadosNoMes: number;
   receitaNoMes: number;
-  taxaConversao: number;     // % leads fechados / total criados no mês
+  taxaConversao: number;
   ticketMedio: number;
-  // Comparação vs mês anterior
-  trendLeads: number;        // % diferença
+  trendLeads: number;
   trendFechados: number;
   trendReceita: number;
-  // Forecast
-  forecastTotal: number;     // pipeline ponderado (excluindo fechado/perdido)
-  forecastComFechados: number; // fechados + ponderado
+  forecast: number;
+  forecastComFechados: number;
   metaMensal: number;
-  probBaterMeta: number;     // 0-100
-  // Etapas (funil)
+  probBaterMeta: number;
+  tempoMedioHoras: number | null;
   etapas: EtapaMetric[];
-  // Histórico mensal (4 meses atrás + atual)
   historicMensal: MesMetric[];
-  // Motivos de perda
   motivosPerdas: { motivo: string; count: number; pct: number }[];
-  // ROI por origem
   origROI: OrigemMetric[];
-  // Qualidade de dados
   qualidade: QualidadeMetric[];
-  // Alertas
   alertasParados: AlertaLead[];
   alertasFollowup: AlertaFollowup[];
   alertasSemMotivo: number;
-  // Total geral
   totalLeads: number;
   loading: boolean;
   error: string | null;
@@ -120,7 +111,8 @@ const EMPTY: GestorMetrics = {
   leadsNoMes: 0, fechadosNoMes: 0, receitaNoMes: 0,
   taxaConversao: 0, ticketMedio: 0,
   trendLeads: 0, trendFechados: 0, trendReceita: 0,
-  forecastTotal: 0, forecastComFechados: 0, metaMensal: 0, probBaterMeta: 0,
+  forecast: 0, forecastComFechados: 0, metaMensal: 0, probBaterMeta: 0,
+  tempoMedioHoras: null,
   etapas: [], historicMensal: [], motivosPerdas: [],
   origROI: [], qualidade: [],
   alertasParados: [], alertasFollowup: [], alertasSemMotivo: 0,
@@ -141,7 +133,7 @@ export function useGestorMetrics(): GestorMetrics {
   async function compute(clienteId: string, metaMensal: number) {
     setMetrics(m => ({ ...m, loading: true, error: null }));
     try {
-      // 1. Buscar TODOS os leads do cliente (sem paginação)
+      // 1. Todos os leads do cliente
       const { data: leads, error: leadsErr } = await supabase
         .from('leads')
         .select('*')
@@ -150,8 +142,9 @@ export function useGestorMetrics(): GestorMetrics {
 
       if (leadsErr) throw leadsErr;
       const all = (leads ?? []) as Lead[];
+      const allIds = all.map(l => l.id);
 
-      // 2. Buscar última atividade por lead (para detectar leads parados)
+      // 2. Última atividade por lead (para alertas de leads parados)
       const activeIds = all
         .filter(l => l.status !== 'fechado' && l.status !== 'perdido')
         .map(l => l.id);
@@ -164,20 +157,36 @@ export function useGestorMetrics(): GestorMetrics {
           .in('lead_id', activeIds)
           .order('created_at', { ascending: false });
 
-        // Mapa lead_id → ultima data de atividade
         (histData ?? []).forEach((h: { lead_id: string; created_at: string }) => {
           if (!ultimaAtividade[h.lead_id]) ultimaAtividade[h.lead_id] = h.created_at;
         });
       }
 
-      // 3. Buscar entradas tipo='status_change' para tempo por etapa
-      const { data: statusChanges } = await supabase
-        .from('leads_historico')
-        .select('lead_id, meta_json, created_at')
-        .eq('tipo', 'status_change')
-        .in('lead_id', all.map(l => l.id));
+      // 3. Status changes estruturados (tipo='status_change') — para tempo por etapa e datas reais de fechamento
+      let statusChanges: { lead_id: string; meta_json: unknown; created_at: string }[] = [];
+      if (allIds.length > 0) {
+        const { data: sc } = await supabase
+          .from('leads_historico')
+          .select('lead_id, meta_json, created_at')
+          .eq('tipo', 'status_change')
+          .in('lead_id', allIds)
+          .order('created_at', { ascending: true });
+        statusChanges = sc ?? [];
+      }
 
-      setMetrics(buildMetrics(all, metaMensal, ultimaAtividade, statusChanges ?? []));
+      // 4. Motivos de perda do histórico (texto) — captura histórico anterior à migration
+      const perdidosIds = all.filter(l => l.status === 'perdido').map(l => l.id);
+      let motivosHistorico: { lead_id: string; descricao: string }[] = [];
+      if (perdidosIds.length > 0) {
+        const { data: mh } = await supabase
+          .from('leads_historico')
+          .select('lead_id, descricao')
+          .in('lead_id', perdidosIds)
+          .like('descricao', '%Motivo de perda:%');
+        motivosHistorico = mh ?? [];
+      }
+
+      setMetrics(buildMetrics(all, metaMensal, ultimaAtividade, statusChanges, motivosHistorico));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro ao carregar métricas';
       setMetrics(m => ({ ...m, loading: false, error: msg }));
@@ -187,30 +196,55 @@ export function useGestorMetrics(): GestorMetrics {
   return metrics;
 }
 
-// ── Cálculo de todas as métricas ──────────────────────────────────────────────
+// ── buildMetrics ───────────────────────────────────────────────────────────────
 function buildMetrics(
   all: Lead[],
   metaMensal: number,
   ultimaAtividade: Record<string, string>,
   statusChanges: { lead_id: string; meta_json: unknown; created_at: string }[],
+  motivosHistorico: { lead_id: string; descricao: string }[],
 ): GestorMetrics {
   const agora = new Date();
   const inicioMesAtual = startOfMonth(agora);
   const inicioMesAnterior = startOfMonth(new Date(agora.getFullYear(), agora.getMonth() - 1, 1));
 
-  // ── KPIs mês atual e anterior ────────────────────────────────────────────────
-  function inRange(lead: Lead, from: Date, to: Date): boolean {
-    const d = new Date(lead.created_at);
-    return d >= from && d < to;
-  }
+  // ── Mapa de datas reais de fechamento ─────────────────────────────────────────
+  // Prioridade: 1) status_change historico com to='fechado', 2) status_changed_at, 3) created_at
+  const closeDateMap: Record<string, Date> = {};
+  statusChanges.forEach(sc => {
+    const meta = sc.meta_json as { to?: string; at?: string } | null;
+    if (meta?.to === 'fechado' && meta?.at) {
+      const d = new Date(meta.at);
+      if (!closeDateMap[sc.lead_id] || d > closeDateMap[sc.lead_id]) {
+        closeDateMap[sc.lead_id] = d;
+      }
+    }
+  });
+  all.filter(l => l.status === 'fechado').forEach(l => {
+    if (!closeDateMap[l.id]) {
+      if (l.status_changed_at) closeDateMap[l.id] = new Date(l.status_changed_at);
+      else closeDateMap[l.id] = new Date(l.created_at); // fallback
+    }
+  });
 
-  const leadsAtual = all.filter(l => inRange(l, inicioMesAtual, agora));
-  const leadsAnterior = all.filter(l => inRange(l, inicioMesAnterior, inicioMesAtual));
+  function inRange(d: Date, from: Date, to: Date) { return d >= from && d < to; }
 
-  const fechAtual = leadsAtual.filter(l => l.status === 'fechado');
-  const fechAnterior = leadsAnterior.filter(l => l.status === 'fechado');
+  // ── KPIs mês atual — usa data REAL de fechamento ──────────────────────────────
+  const leadsAtual   = all.filter(l => inRange(new Date(l.created_at), inicioMesAtual, agora));
+  const leadsAnterior = all.filter(l => inRange(new Date(l.created_at), inicioMesAnterior, inicioMesAtual));
 
-  const recAtual = fechAtual.reduce((s, l) => s + getLeadValor(l), 0);
+  const fechAtual = all.filter(l => {
+    if (l.status !== 'fechado') return false;
+    const cd = closeDateMap[l.id];
+    return cd && inRange(cd, inicioMesAtual, agora);
+  });
+  const fechAnterior = all.filter(l => {
+    if (l.status !== 'fechado') return false;
+    const cd = closeDateMap[l.id];
+    return cd && inRange(cd, inicioMesAnterior, inicioMesAtual);
+  });
+
+  const recAtual   = fechAtual.reduce((s, l) => s + getLeadValor(l), 0);
   const recAnterior = fechAnterior.reduce((s, l) => s + getLeadValor(l), 0);
 
   function trend(a: number, b: number) {
@@ -222,34 +256,28 @@ function buildMetrics(
     ? Math.round((fechAtual.length / leadsAtual.length) * 100) : 0;
   const ticketMedio = fechAtual.length > 0 ? Math.round(recAtual / fechAtual.length) : 0;
 
-  // ── Forecast ─────────────────────────────────────────────────────────────────
-  const ativos = all.filter(l => l.status !== 'perdido');
-  const forecastTotal = ativos
-    .filter(l => l.status !== 'fechado')
+  // ── Forecast ──────────────────────────────────────────────────────────────────
+  const forecast = all
+    .filter(l => l.status !== 'perdido' && l.status !== 'fechado')
     .reduce((s, l) => s + getLeadValor(l) * (PROB_ETAPA[l.status] ?? 0), 0);
-  const fechadosMesValor = all
-    .filter(l => l.status === 'fechado' && inRange(l, inicioMesAtual, agora))
-    .reduce((s, l) => s + getLeadValor(l), 0);
-  const forecastComFechados = fechadosMesValor + forecastTotal;
+  const forecastComFechados = recAtual + forecast;
   const probBaterMeta = metaMensal > 0
     ? Math.min(100, Math.round((forecastComFechados / metaMensal) * 100)) : 0;
 
   // ── Funil por etapa ───────────────────────────────────────────────────────────
   const ORDEM = ['novo', 'contato', 'proposta', 'negociacao', 'fechado', 'perdido'];
-  const ativosParaFunil = all.filter(l => l.status !== 'perdido');
-  const totalFunil = ativosParaFunil.length || 1;
+  const totalFunil = all.filter(l => l.status !== 'perdido').length || 1;
 
   // Tempo médio por etapa via status_changes
   const temposPorEtapa: Record<string, number[]> = {};
   const changesByLead: Record<string, { to: string; at: Date }[]> = {};
   statusChanges.forEach(sc => {
-    if (!changesByLead[sc.lead_id]) changesByLead[sc.lead_id] = [];
     const meta = sc.meta_json as { to?: string; at?: string } | null;
     if (meta?.to && meta?.at) {
+      if (!changesByLead[sc.lead_id]) changesByLead[sc.lead_id] = [];
       changesByLead[sc.lead_id].push({ to: meta.to, at: new Date(meta.at) });
     }
   });
-
   Object.values(changesByLead).forEach(changes => {
     changes.sort((a, b) => a.at.getTime() - b.at.getTime());
     for (let i = 1; i < changes.length; i++) {
@@ -264,11 +292,10 @@ function buildMetrics(
     const leadsNaEtapa = all.filter(l => l.status === status);
     const count = leadsNaEtapa.length;
     const valor = leadsNaEtapa.reduce((s, l) => s + getLeadValor(l), 0);
-    const prevStatus = idx > 0 ? ORDEM[idx - 1] : null;
-    const prevCount = prevStatus ? all.filter(l => l.status === prevStatus).length : totalFunil;
+    const prevCount = idx > 0 ? all.filter(l => l.status === ORDEM[idx - 1]).length : totalFunil;
     const pctConversao = prevCount > 0 ? Math.round((count / (count + prevCount || 1)) * 100) : 0;
     const tempos = temposPorEtapa[status] ?? [];
-    const tempoMedio = tempos.length >= 2
+    const tempoMedio = tempos.length >= 1
       ? Math.round(tempos.reduce((s, t) => s + t, 0) / tempos.length) : null;
 
     return {
@@ -281,19 +308,30 @@ function buildMetrics(
     };
   });
 
-  // ── Histórico mensal (5 meses) ────────────────────────────────────────────────
+  // Tempo médio global (todas as etapas com dados)
+  const todosTempos = Object.values(temposPorEtapa).flat();
+  const tempoMedioHoras = todosTempos.length >= 1
+    ? Math.round(todosTempos.reduce((s, t) => s + t, 0) / todosTempos.length) : null;
+
+  // ── Histórico mensal (5 meses) — usa data REAL de fechamento ─────────────────
   const historicMensal: MesMetric[] = [];
   for (let i = 4; i >= 0; i--) {
     const mesDate = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
-    const fimMes = new Date(agora.getFullYear(), agora.getMonth() - i + 1, 1);
+    const fimMes  = new Date(agora.getFullYear(), agora.getMonth() - i + 1, 1);
+
     const mLeads = all.filter(l => {
       const d = new Date(l.created_at);
       return d >= mesDate && d < fimMes;
     });
-    const mFech = mLeads.filter(l => l.status === 'fechado');
+    const mFech = all.filter(l => {
+      if (l.status !== 'fechado') return false;
+      const cd = closeDateMap[l.id];
+      return cd && cd >= mesDate && cd < fimMes;
+    });
     const mRec = mFech.reduce((s, l) => s + getLeadValor(l), 0);
+
     historicMensal.push({
-      label: mesAno(mesDate),
+      mes: mesAno(mesDate),
       leads: mLeads.length,
       fechados: mFech.length,
       receita: mRec,
@@ -302,28 +340,46 @@ function buildMetrics(
   }
 
   // ── Motivos de perda ──────────────────────────────────────────────────────────
-  const perdidos = all.filter(l => l.status === 'perdido' && l.motivo_perda);
+  // Mapa lead → motivo: prioriza motivo_perda da tabela, depois extrai do histórico
   const motivoMap: Record<string, number> = {};
-  perdidos.forEach(l => {
-    const m = (l.motivo_perda ?? 'Não informado').trim();
+
+  // 1. Motivos salvos diretamente na coluna (via fix do moveLead)
+  all.filter(l => l.status === 'perdido' && l.motivo_perda).forEach(l => {
+    const m = l.motivo_perda!.trim();
     motivoMap[m] = (motivoMap[m] ?? 0) + 1;
   });
-  const totalPerdidos = Object.values(motivoMap).reduce((s, v) => s + v, 0) || 1;
+
+  // 2. Motivos históricos (leads perdidos SEM motivo_perda na coluna)
+  const leadsSemMotivo = new Set(
+    all.filter(l => l.status === 'perdido' && !l.motivo_perda).map(l => l.id)
+  );
+  motivosHistorico
+    .filter(h => leadsSemMotivo.has(h.lead_id))
+    .forEach(h => {
+      // Extrai texto depois de "Motivo de perda:"
+      const match = h.descricao.match(/Motivo de perda:\s*(.+)/i);
+      if (match?.[1]) {
+        const m = match[1].trim();
+        motivoMap[m] = (motivoMap[m] ?? 0) + 1;
+      }
+    });
+
+  const totalMotivos = Object.values(motivoMap).reduce((s, v) => s + v, 0) || 1;
   const motivosPerdas = Object.entries(motivoMap)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([motivo, count]) => ({ motivo, count, pct: Math.round((count / totalPerdidos) * 100) }));
+    .slice(0, 8)
+    .map(([motivo, count]) => ({ motivo, count, pct: Math.round((count / totalMotivos) * 100) }));
 
   // ── ROI por origem ────────────────────────────────────────────────────────────
   const origMap: Record<string, Lead[]> = {};
   all.forEach(l => {
-    const o = l.orig ?? 'Não definido';
+    const o = (l.orig ?? 'Não definido').trim() || 'Não definido';
     if (!origMap[o]) origMap[o] = [];
     origMap[o].push(l);
   });
   const origROI: OrigemMetric[] = Object.entries(origMap)
     .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 6)
+    .slice(0, 8)
     .map(([orig, ls]) => {
       const fechs = ls.filter(l => l.status === 'fechado');
       const receita = fechs.reduce((s, l) => s + getLeadValor(l), 0);
@@ -339,13 +395,13 @@ function buildMetrics(
 
   // ── Qualidade de dados ────────────────────────────────────────────────────────
   const campos: { campo: keyof Lead; label: string }[] = [
-    { campo: 'nome', label: 'Nome' },
-    { campo: 'tel', label: 'Telefone' },
+    { campo: 'nome',  label: 'Nome' },
+    { campo: 'tel',   label: 'Telefone' },
     { campo: 'email', label: 'E-mail' },
-    { campo: 'seg', label: 'Segmento' },
-    { campo: 'orig', label: 'Origem' },
-    { campo: 'obs', label: 'Observação' },
+    { campo: 'seg',   label: 'Segmento' },
+    { campo: 'orig',  label: 'Origem' },
     { campo: 'valor', label: 'Valor' },
+    { campo: 'obs',   label: 'Observação' },
   ];
   const total = all.length || 1;
   const qualidade: QualidadeMetric[] = campos.map(({ campo, label }) => {
@@ -359,20 +415,17 @@ function buildMetrics(
   // ── Alertas ───────────────────────────────────────────────────────────────────
   const hoje = new Date();
 
-  // Leads parados > 7 dias (sem atividade recente)
   const alertasParados: AlertaLead[] = all
     .filter(l => l.status !== 'fechado' && l.status !== 'perdido')
     .map(l => {
       const ultimaAtvStr = ultimaAtividade[l.id] ?? l.created_at;
-      const ultima = new Date(ultimaAtvStr);
-      const dias = Math.floor((hoje.getTime() - ultima.getTime()) / 86_400_000);
+      const dias = Math.floor((hoje.getTime() - new Date(ultimaAtvStr).getTime()) / 86_400_000);
       return { id: l.id, nome: l.nome, status: l.status, diasParado: dias };
     })
     .filter(a => a.diasParado >= 7)
     .sort((a, b) => b.diasParado - a.diasParado)
     .slice(0, 10);
 
-  // Follow-ups vencidos
   const alertasFollowup: AlertaFollowup[] = all
     .filter(l => l.followup && l.status !== 'fechado' && l.status !== 'perdido')
     .map(l => {
@@ -385,8 +438,10 @@ function buildMetrics(
     .sort((a, b) => b.diasAtraso - a.diasAtraso)
     .slice(0, 10);
 
-  // Perdidos sem motivo
-  const alertasSemMotivo = all.filter(l => l.status === 'perdido' && !l.motivo_perda).length;
+  const alertasSemMotivo = all.filter(l =>
+    l.status === 'perdido' && !l.motivo_perda &&
+    !motivosHistorico.some(h => h.lead_id === l.id)
+  ).length;
 
   return {
     leadsNoMes: leadsAtual.length,
@@ -397,10 +452,11 @@ function buildMetrics(
     trendLeads: trend(leadsAtual.length, leadsAnterior.length),
     trendFechados: trend(fechAtual.length, fechAnterior.length),
     trendReceita: trend(recAtual, recAnterior),
-    forecastTotal,
+    forecast,
     forecastComFechados,
     metaMensal,
     probBaterMeta,
+    tempoMedioHoras,
     etapas,
     historicMensal,
     motivosPerdas,

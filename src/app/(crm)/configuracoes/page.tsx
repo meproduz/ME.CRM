@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,8 @@ export default function ConfiguracoesPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [metaInput, setMetaInput] = useState(String(state.metaMensal));
+  // Sync input when DB value loads (SET_CLIENTE fires after async fetch)
+  useEffect(() => { setMetaInput(String(state.metaMensal)); }, [state.metaMensal]);
   const [metaStatus, setMetaStatus] = useState('');
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
   const [csvDragging, setCsvDragging] = useState(false);

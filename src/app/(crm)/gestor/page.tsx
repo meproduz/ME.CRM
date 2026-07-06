@@ -254,58 +254,135 @@ export default function GestorPage() {
 
         {/* ══ META DO MÊS ══ */}
         {m.metaMensal > 0 && (() => {
-          const pctMeta = Math.min(Math.round((m.receitaNoMes / m.metaMensal) * 100), 100);
+          const pctMeta     = Math.min(Math.round((m.receitaNoMes / m.metaMensal) * 100), 100);
           const pctForecast = Math.min(Math.round((m.forecastComFechados / m.metaMensal) * 100), 100);
-          const falta = Math.max(0, m.metaMensal - m.receitaNoMes);
-          const R = 52, cx = 68, cy = 68, sw = 10;
-          const circ = 2 * Math.PI * R;
-          const dash = (pctMeta / 100) * circ;
-          const corProb = m.probBaterMeta >= 80 ? '#22C55E' : m.probBaterMeta >= 50 ? '#F97316' : '#EF4444';
+          const falta       = Math.max(0, m.metaMensal - m.receitaNoMes);
+          const corProb     = m.probBaterMeta >= 80 ? '#22C55E' : m.probBaterMeta >= 50 ? '#F97316' : '#EF4444';
+
+          // ── Semi-circle gauge geometry ────────────────────────────────────
+          const Rg = 128, cxg = 200, cyg = 145, swg = 22;
+          const semiLen = Math.PI * Rg;
+          const fillLen = (pctMeta / 100) * semiLen;
+          const needleA = Math.PI - (pctMeta / 100) * Math.PI;
+          const nxg = cxg + Rg * Math.cos(needleA);
+          const nyg = cyg - Rg * Math.sin(needleA);
+          const tks = [0, 25, 50, 75, 100].map(t => {
+            const a = Math.PI - (t / 100) * Math.PI;
+            return {
+              x1: cxg + (Rg + swg / 2 + 3)  * Math.cos(a), y1: cyg - (Rg + swg / 2 + 3)  * Math.sin(a),
+              x2: cxg + (Rg + swg / 2 + 11) * Math.cos(a), y2: cyg - (Rg + swg / 2 + 11) * Math.sin(a),
+            };
+          });
+
           return (
-            <div className="dash-meta" style={{ background: 'linear-gradient(145deg,rgba(201,162,39,0.07) 0%,rgba(201,162,39,0.02) 100%)', border: '1px solid rgba(201,162,39,0.15)' }}>
+            <div className="dash-meta" style={{ background: 'linear-gradient(145deg,rgba(201,162,39,0.06) 0%,rgba(201,162,39,0.01) 100%)', border: '1px solid rgba(201,162,39,0.13)' }}>
               <div className="dash-section-title">Meta do Mês
                 <span style={{ fontWeight: 400, color: 'var(--text3)', fontSize: 10 }}>&nbsp;· {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 14 }}>
-                {/* Arc */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <svg width="136" height="136" viewBox="0 0 136 136">
-                    <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw}/>
-                    {pctMeta > 0 && (
-                      <circle cx={cx} cy={cy} r={R} fill="none" stroke="#C9A227" strokeWidth={sw}
-                        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-                        transform={`rotate(-90 ${cx} ${cy})`}
-                        style={{ transition: 'stroke-dasharray 0.8s ease', filter: 'drop-shadow(0 0 6px rgba(201,162,39,0.4))' }}
-                      />
-                    )}
-                    <text x={cx} y={cy - 4} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="20" fontWeight="800" fill="#fff">{pctMeta}%</text>
-                    <text x={cx} y={cy + 13} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="9" fill="#555">atingido</text>
-                  </svg>
-                </div>
-                {/* Barras */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {[
-                    { label: 'Receita fechada',    val: fmtR(m.receitaNoMes),       pct: pctMeta,                           color: '#C9A227' },
-                    { label: 'Forecast total',      val: fmtR(m.forecastComFechados), pct: pctForecast,                       color: '#3B82F6' },
-                    { label: 'Faltam para a meta', val: fmtR(falta),                pct: Math.min(Math.round((falta / m.metaMensal) * 100), 100), color: '#EF4444' },
-                  ].map((b) => (
-                    <div key={b.label}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                        <span style={{ fontSize: 10, color: 'var(--text2)' }}>{b.label}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: b.color }}>{b.val}</span>
-                      </div>
-                      <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
-                        <div style={{ width: `${b.pct}%`, height: '100%', background: b.color, borderRadius: 2, transition: 'width 0.8s ease' }} />
-                      </div>
-                    </div>
+
+              {/* ── Gauge SVG ── */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+                <svg viewBox="0 0 400 162" style={{ width: '100%', maxWidth: 460, overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="gaugeFill" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"   stopColor="#EF4444"/>
+                      <stop offset="35%"  stopColor="#F97316"/>
+                      <stop offset="72%"  stopColor="#EAB308"/>
+                      <stop offset="100%" stopColor="#22C55E"/>
+                    </linearGradient>
+                    <radialGradient id="needleHalo" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%"   stopColor={corProb} stopOpacity="0.6"/>
+                      <stop offset="100%" stopColor={corProb} stopOpacity="0"/>
+                    </radialGradient>
+                  </defs>
+
+                  {/* Outer ambient glow ring */}
+                  <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
+                    fill="none" stroke="rgba(201,162,39,0.06)" strokeWidth={swg+14} strokeLinecap="round"/>
+
+                  {/* Background track */}
+                  <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
+                    fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={swg} strokeLinecap="round"/>
+
+                  {/* Inner depth shadow — 3D concave feel */}
+                  <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
+                    fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth={swg - 10} strokeLinecap="round"
+                    style={{ filter: 'blur(4px)', opacity: 0.6 }}/>
+
+                  {/* Colored fill arc */}
+                  {pctMeta > 0 && (
+                    <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
+                      fill="none" stroke="url(#gaugeFill)" strokeWidth={swg} strokeLinecap="round"
+                      strokeDasharray={`${fillLen} ${semiLen + 600}`}
+                      style={{
+                        filter: 'drop-shadow(0 0 10px rgba(34,197,94,0.45)) drop-shadow(0 0 22px rgba(249,115,22,0.22))',
+                        transition: 'stroke-dasharray 1.3s cubic-bezier(0.34,1.56,0.64,1)',
+                      }}/>
+                  )}
+
+                  {/* Specular sheen — glass/3D effect */}
+                  {pctMeta > 4 && (
+                    <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
+                      fill="none" stroke="rgba(255,255,255,0.23)" strokeWidth={swg / 3.5} strokeLinecap="round"
+                      strokeDasharray={`${Math.min(fillLen * 0.28, semiLen * 0.18)} ${semiLen + 600}`}
+                      style={{ transition: 'stroke-dasharray 1.3s ease' }}/>
+                  )}
+
+                  {/* Tick marks */}
+                  {tks.map((tk, i) => (
+                    <line key={i} x1={tk.x1} y1={tk.y1} x2={tk.x2} y2={tk.y2}
+                      stroke="rgba(255,255,255,0.2)" strokeWidth={2} strokeLinecap="round"/>
                   ))}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Prob. de bater a meta</div>
-                      <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 1 }}>Meta: {fmtR(m.metaMensal)}</div>
+
+                  {/* Edge labels */}
+                  <text x={cxg - Rg - swg/2 - 5} y={cyg + 16} textAnchor="end"
+                    fontSize={9} fill="rgba(255,255,255,0.28)" fontFamily="Inter,sans-serif">0%</text>
+                  <text x={cxg + Rg + swg/2 + 5} y={cyg + 16} textAnchor="start"
+                    fontSize={9} fill="rgba(255,255,255,0.28)" fontFamily="Inter,sans-serif">100%</text>
+                  <text x={cxg} y={cyg + 17} textAnchor="middle"
+                    fontSize={10} fill={corProb} fontFamily="Inter,sans-serif" fontWeight="700">{fmtR(m.metaMensal)}</text>
+
+                  {/* Needle halo + dot */}
+                  {pctMeta > 0 && <>
+                    <circle cx={nxg} cy={nyg} r={14} fill="url(#needleHalo)" style={{ filter: 'blur(6px)' }}/>
+                    <circle cx={nxg} cy={nyg} r={5.5} fill="white"
+                      style={{ filter: `drop-shadow(0 0 6px ${corProb}) drop-shadow(0 0 3px white)` }}/>
+                    <circle cx={nxg} cy={nyg} r={2.5} fill={corProb}/>
+                  </>}
+
+                  {/* Big percentage */}
+                  <text x={cxg} y={cyg - 52} textAnchor="middle"
+                    fontSize={52} fontWeight={900} fill="#fff"
+                    fontFamily="Inter,system-ui,sans-serif" letterSpacing="-2">{pctMeta}%</text>
+                  <text x={cxg} y={cyg - 24} textAnchor="middle"
+                    fontSize={9} fill="rgba(255,255,255,0.3)"
+                    fontFamily="Inter,sans-serif" letterSpacing="2">DA META ATINGIDA</text>
+                </svg>
+              </div>
+
+              {/* ── Stat bars ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
+                {[
+                  { label: 'Receita fechada',    val: fmtR(m.receitaNoMes),        pct: pctMeta,     color: '#C9A227' },
+                  { label: 'Forecast total',     val: fmtR(m.forecastComFechados), pct: pctForecast, color: '#3B82F6' },
+                  { label: 'Faltam para a meta', val: fmtR(falta), pct: Math.min(Math.round((falta / m.metaMensal) * 100), 100), color: '#EF4444' },
+                ].map((b) => (
+                  <div key={b.label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 10, color: 'var(--text2)' }}>{b.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: b.color }}>{b.val}</span>
                     </div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: corProb }}>{m.probBaterMeta}%</div>
+                    <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                      <div style={{ width: `${b.pct}%`, height: '100%', background: b.color, borderRadius: 2, transition: 'width 0.8s ease' }} />
+                    </div>
                   </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>Prob. de bater a meta</div>
+                    <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 1 }}>Meta: {fmtR(m.metaMensal)}</div>
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: corProb }}>{m.probBaterMeta}%</div>
                 </div>
               </div>
             </div>

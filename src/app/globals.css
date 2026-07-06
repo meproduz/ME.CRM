@@ -36,10 +36,10 @@
   --cyan:    #22D3EE;
 
   /* ── Text ── */
-  --text:    #EFEFEF;
-  --text2:   #888896;
-  --text3:   #44444F;
-  --text4:   #2A2A35;
+  --text:    #F2F2F5;
+  --text2:   #AEAEC0;
+  --text3:   #6E6E80;
+  --text4:   #3E3E50;
 
   /* ── Dimensions ── */
   --sidebar-w: 220px;

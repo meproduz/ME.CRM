@@ -15,9 +15,11 @@ import type { NextRequest } from 'next/server';
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self'",
+  // unsafe-inline necessário para Next.js App Router (estilos em runtime)
+  // Google Fonts: stylesheet carregado de googleapis, fontes (woff2) de gstatic
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' https://fonts.gstatic.com",
   `connect-src 'self' https://*.supabase.co wss://*.supabase.co`,
   "frame-ancestors 'none'",
   "base-uri 'self'",

@@ -138,10 +138,12 @@ export function useGestorMetrics(): GestorMetrics {
   const [metrics, setMetrics] = useState<GestorMetrics>(EMPTY);
 
   useEffect(() => {
+    // Dupla verificação: role admin obrigatório (defesa em profundidade além do redirect na página)
     if (!state.currentUser?.cliente_id) return;
+    if (state.currentUser.role !== 'admin') return;
     compute(state.currentUser.cliente_id, state.metaMensal);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.currentUser?.cliente_id, state.metaMensal]);
+  }, [state.currentUser?.cliente_id, state.currentUser?.role, state.metaMensal]);
 
   async function compute(clienteId: string, metaMensal: number) {
     setMetrics(m => ({ ...m, loading: true, error: null }));

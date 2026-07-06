@@ -93,7 +93,8 @@ export default function ConfiguracoesPage() {
     alert(`${count} leads importados com sucesso!`);
   }
 
-  const webhookUrl = `https://rylexblaolbiovfmrwvi.supabase.co/functions/v1/webhook-lead?cliente_id=${state.currentUser?.cliente_id ?? '...'}`;
+  const supabaseBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const webhookUrl = `${supabaseBase}/functions/v1/webhook-lead?cliente_id=${state.currentUser?.cliente_id ?? '...'}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

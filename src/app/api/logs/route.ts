@@ -13,6 +13,21 @@ import type { LogEntry } from '@/lib/logger';
 const MAX_PAYLOAD_BYTES = 8 * 1024; // 8KB por log entry
 const VALID_LEVELS = new Set(['debug', 'info', 'warn', 'error']);
 
+// Domínios autorizados a enviar logs (própria app)
+const ALLOWED_ORIGINS = new Set([
+  process.env.NEXT_PUBLIC_APP_URL ?? '',
+  'https://meproduz-dashboard.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean));
+
+function isOriginAllowed(req: Request): boolean {
+  const origin = req.headers.get('origin') ?? req.headers.get('referer') ?? '';
+  // Em produção exige origin conhecida; em dev permite qualquer localhost
+  if (process.env.NODE_ENV !== 'production') return true;
+  return ALLOWED_ORIGINS.has(origin.replace(/\/$/, ''));
+}
+
 // ── Rate Limiter em memória — 30 req/min por IP ───────────────────────────────
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX       = 30;
@@ -52,6 +67,14 @@ function isRateLimited(ip: string): boolean {
 export async function POST(req: Request) {
   const requestId = req.headers.get('x-request-id') ?? crypto.randomUUID();
   const ip = getIp(req);
+
+  // Rejeita requests de origens não autorizadas (evita log pollution)
+  if (!isOriginAllowed(req)) {
+    return NextResponse.json(
+      { ok: false, error: 'forbidden' },
+      { status: 403 }
+    );
+  }
 
   if (isRateLimited(ip)) {
     return NextResponse.json(

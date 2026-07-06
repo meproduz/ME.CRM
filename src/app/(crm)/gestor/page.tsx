@@ -465,20 +465,49 @@ export default function GestorPage() {
           {/* Histórico mensal */}
           <div className="dash-meta">
             <div className="dash-section-title">Histórico dos Últimos 5 Meses</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-                {['Mês', 'Leads', 'Fechados', 'Receita'].map(h => (
-                  <div key={h} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{h}</div>
-                ))}
-              </div>
-              {m.historicMensal.map((row, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text2)' }}>{row.mes}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{row.leads}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#22C55E' }}>{row.fechados}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gold)' }}>{fmtR(row.receita)}</div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+              {(() => {
+                const maxL = Math.max(...m.historicMensal.map(r => r.leads), 1);
+                return m.historicMensal.map((row, i) => {
+                  const isNow = i === m.historicMensal.length - 1;
+                  const conv  = row.leads > 0 ? Math.round((row.fechados / row.leads) * 100) : 0;
+                  return (
+                    <div key={i} style={{
+                      padding: '10px 12px', borderRadius: 10,
+                      background: isNow ? 'rgba(201,162,39,0.08)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${isNow ? 'rgba(201,162,39,0.2)' : 'rgba(255,255,255,0.05)'}`,
+                    }}>
+                      {/* Row top: month + receita */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: isNow ? 700 : 500, color: isNow ? 'var(--gold)' : 'var(--text2)' }}>{row.mes}</span>
+                          {isNow && <span style={{ fontSize: 8, fontWeight: 700, background: 'rgba(201,162,39,0.18)', color: 'var(--gold)', padding: '1px 6px', borderRadius: 20, letterSpacing: '0.5px' }}>ATUAL</span>}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: row.receita > 0 ? 'var(--gold)' : 'var(--text3)' }}>{fmtR(row.receita)}</span>
+                      </div>
+                      {/* Leads bar + stats */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
+                            <div style={{ width: `${(row.leads / maxL) * 100}%`, height: '100%', background: isNow ? 'var(--gold)' : 'rgba(255,255,255,0.25)', borderRadius: 99, transition: 'width 0.6s ease' }} />
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>{row.leads} lead{row.leads !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <span style={{ fontSize: 9, color: row.fechados > 0 ? '#22C55E' : 'var(--text3)' }}>
+                            {row.fechados > 0 ? `✓ ${row.fechados} fechado${row.fechados !== 1 ? 's' : ''}` : '—'}
+                          </span>
+                          {conv > 0 && (
+                            <span style={{ fontSize: 9, color: conv >= 20 ? '#22C55E' : '#F97316', background: conv >= 20 ? 'rgba(34,197,94,0.1)' : 'rgba(249,115,22,0.1)', padding: '0 5px', borderRadius: 10 }}>
+                              {conv}% conv.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
 
@@ -531,20 +560,44 @@ export default function GestorPage() {
             {m.origROI.length === 0 ? (
               <div style={{ color: 'var(--text3)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>Nenhum dado de origem registrado</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 50px 50px 60px', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-                  {['Origem', 'Leads', 'Fech.', 'Receita'].map(h => (
-                    <div key={h} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{h}</div>
-                  ))}
-                </div>
-                {m.origROI.slice(0, 6).map((r, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 50px 50px 60px', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', alignItems: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.orig}</div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{r.leads}</div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#22C55E' }}>{r.fechados}</div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gold)' }}>{fmtR(r.receita)}</div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                {(() => {
+                  const maxL = Math.max(...m.origROI.map(r => r.leads), 1);
+                  const rankColor = ['#C9A227', '#AEAEC0', '#C97C2F'];
+                  return m.origROI.slice(0, 6).map((r, i) => {
+                    const conv = r.leads > 0 ? Math.round((r.fechados / r.leads) * 100) : 0;
+                    const convColor = conv >= 25 ? '#22C55E' : conv >= 10 ? '#F97316' : '#EF4444';
+                    const isTop = i === 0;
+                    return (
+                      <div key={i} style={{
+                        padding: '10px 12px', borderRadius: 10,
+                        background: isTop ? 'rgba(201,162,39,0.07)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isTop ? 'rgba(201,162,39,0.18)' : 'rgba(255,255,255,0.05)'}`,
+                      }}>
+                        {/* Top row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: rankColor[i] ?? 'var(--text3)', minWidth: 18 }}>#{i+1}</span>
+                          <span style={{ fontSize: 12, fontWeight: isTop ? 700 : 500, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.orig}</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: r.receita > 0 ? 'var(--gold)' : 'var(--text3)', flexShrink: 0 }}>{fmtR(r.receita)}</span>
+                        </div>
+                        {/* Bottom row: bar + meta */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
+                            <div style={{ width: `${(r.leads / maxL) * 100}%`, height: '100%', background: isTop ? 'var(--gold)' : 'rgba(255,255,255,0.2)', borderRadius: 99, transition: 'width 0.6s ease' }} />
+                          </div>
+                          <span style={{ fontSize: 9, color: 'var(--text3)', flexShrink: 0 }}>{r.leads} lead{r.leads !== 1 ? 's' : ''}</span>
+                          {conv > 0 ? (
+                            <span style={{ fontSize: 9, fontWeight: 700, color: convColor, background: `${convColor}18`, border: `1px solid ${convColor}30`, padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
+                              {conv}%
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 9, color: '#22C55E' }}>{r.fechados > 0 ? `✓ ${r.fechados}` : '—'}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>

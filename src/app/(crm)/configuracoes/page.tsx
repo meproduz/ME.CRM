@@ -23,8 +23,10 @@ export default function ConfiguracoesPage() {
   // ─── Salvar meta ────────────────────────────────────────────────────────────
 
   async function saveMeta() {
-    const val = parseInt(metaInput);
-    if (!val || val <= 0) { alert('Informe um valor válido'); return; }
+    // Strip thousand-separator dots (6.350 → 6350) and convert comma decimals
+    const cleaned = metaInput.replace(/\./g, '').replace(',', '.');
+    const val = Math.round(parseFloat(cleaned));
+    if (!val || val <= 0 || isNaN(val)) { alert('Informe um valor válido'); return; }
     setMetaStatus('Salvando...');
     const { error } = await supabase.from('clientes')
       .update({ meta_mensal: val }).eq('id', state.currentUser!.cliente_id);

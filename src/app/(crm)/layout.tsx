@@ -36,7 +36,10 @@ function CRMInner({ children }: { children: React.ReactNode }) {
         router.replace('/login');
         return;
       }
-      dispatch({ type: 'SET_USER', payload: usuario });
+      dispatch({ type: 'SET_USER', payload: {
+        ...usuario,
+        role: (usuario.perfil === 'gestor' || usuario.perfil === 'admin') ? 'admin' : 'vendedor',
+      } });
 
       const { data: cliente } = await supabase
         .from('clientes').select('*').eq('id', usuario.cliente_id).single();

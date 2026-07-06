@@ -6,7 +6,7 @@ import { isStale } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import Logo from '@/components/Logo';
 
-const NAV = [
+const NAV_VENDEDOR = [
   {
     href: '/dashboard', label: 'Dashboard',
     icon: <svg viewBox="0 0 18 18" fill="currentColor" width="18" height="18"><rect x="1" y="1" width="7" height="7" rx="1.5"/><rect x="10" y="1" width="7" height="7" rx="1.5"/><rect x="1" y="10" width="7" height="7" rx="1.5"/><rect x="10" y="10" width="7" height="7" rx="1.5"/></svg>,
@@ -26,6 +26,14 @@ const NAV = [
   {
     href: '/leads', label: 'Leads',
     icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M2 5h14M2 9h9M2 13h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+  },
+];
+
+const NAV_ADMIN_EXTRA = [
+  {
+    href: '/gestor', label: 'Painel Gestor',
+    icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.4"/><path d="M9 5v4l3 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    gold: true,
   },
 ];
 
@@ -56,7 +64,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <div className="nav-section">
-        {NAV.map((item) => {
+        {NAV_VENDEDOR.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
           return (
             <div
@@ -72,6 +80,33 @@ export default function Sidebar() {
             </div>
           );
         })}
+
+        {state.currentUser?.role === 'admin' && (
+          <>
+            <div className="nav-divider" style={{ margin: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }} />
+            {NAV_ADMIN_EXTRA.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href);
+              return (
+                <div
+                  key={item.href}
+                  className={`nav-item${isActive ? ' active' : ''}`}
+                  onClick={() => router.push(item.href)}
+                  style={item.gold ? {
+                    color: 'var(--gold)',
+                    borderColor: isActive ? 'rgba(212,175,55,0.3)' : 'transparent',
+                  } : undefined}
+                >
+                  <span className="nav-icon" style={item.gold ? { color: 'var(--gold)' } : undefined}>
+                    {item.icon}
+                  </span>
+                  <span className="nav-text" style={item.gold ? { color: 'var(--gold)', fontWeight: 600 } : undefined}>
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
       {/* Bottom */}

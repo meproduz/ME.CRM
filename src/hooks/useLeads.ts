@@ -122,16 +122,22 @@ export function useLeads() {
   const moveLead = useCallback(async (leadId: string, novoStatus: string, motivo?: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
     if (!lead) return;
-    await supabase.from('leads').update({ status: novoStatus }).eq('id', leadId);
+    await supabase.from('leads').update({ status: novoStatus, status_changed_at: new Date().toISOString() }).eq('id', leadId);
     const LABELS: Record<string, string> = {
       novo: 'Novo', contato: 'Em contato', proposta: 'Proposta',
       negociacao: 'Negociação', fechado: 'Fechado ✅', perdido: 'Perdido',
     };
     const entry = `${hoje()} ${agora()} — Movido para ${LABELS[novoStatus] ?? novoStatus}`;
-    await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
+    // Registro estruturado para métricas do gestor (tipo + meta_json)
+    await supabase.from('leads_historico').insert({
+      lead_id: leadId,
+      descricao: entry,
+      tipo: 'status_change',
+      meta_json: { from: lead.status, to: novoStatus, at: new Date().toISOString() },
+    });
     if (motivo) {
       const motivoEntry = `📝 ${hoje()} ${agora()} — Motivo de perda: ${motivo}`;
-      await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: motivoEntry });
+      await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: motivoEntry, tipo: 'anotacao' });
       dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry: motivoEntry } });
     }
     dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, status: novoStatus as LeadStatus } });

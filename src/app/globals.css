@@ -74,6 +74,16 @@ a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font-family: inherit; border: none; outline: none; }
 input, select, textarea { font-family: inherit; outline: none; }
 
+/* ─── Fix: Chrome autofill sobrescreve background dos inputs ──── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px rgba(14,14,20,0.98) inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 /* ─── Keyframes ──────────────────────────────────────────────── */
 @keyframes fade-in    { from { opacity:0; } to { opacity:1; } }
 @keyframes slide-up   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }

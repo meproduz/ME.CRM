@@ -34,7 +34,7 @@ export interface Lead {
   score: number | null;
   motivo_perda: string | null;
   created_at: string;
-  status_changed_at: string | null;
+  status_changed_at?: string | null;
   // Virtual
   hist: string[];
 }

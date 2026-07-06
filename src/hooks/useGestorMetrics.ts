@@ -81,6 +81,16 @@ export interface QualidadeMetric {
 export interface AlertaLead { id: string; nome: string; status: string; diasParado: number; }
 export interface AlertaFollowup { id: string; nome: string; followup: string; diasAtraso: number; }
 
+export interface MotivoLead {
+  id: string;
+  nome: string;
+  tel: string | null;
+  orig: string | null;
+  seg: string | null;
+  valor: number;
+  dataPerdido: string; // data em que foi marcado como perdido
+}
+
 export interface GestorMetrics {
   leadsNoMes: number;
   fechadosNoMes: number;
@@ -103,6 +113,7 @@ export interface GestorMetrics {
   alertasParados: AlertaLead[];
   alertasFollowup: AlertaFollowup[];
   alertasSemMotivo: number;
+  leadsByMotivo: Record<string, MotivoLead[]>;
   totalLeads: number;
   loading: boolean;
   error: string | null;
@@ -117,6 +128,7 @@ const EMPTY: GestorMetrics = {
   etapas: [], historicMensal: [], motivosPerdas: [],
   origROI: [], qualidade: [],
   alertasParados: [], alertasFollowup: [], alertasSemMotivo: 0,
+  leadsByMotivo: {},
   totalLeads: 0, loading: true, error: null,
 };
 
@@ -352,27 +364,46 @@ function buildMetrics(
   }
 
   // ── Motivos de perda ──────────────────────────────────────────────────────────
-  // Mapa lead → motivo: prioriza motivo_perda da tabela, depois extrai do histórico
+  // Mapa motivo → contagem E mapa motivo → leads (para drill-down)
   const motivoMap: Record<string, number> = {};
+  const leadsByMotivo: Record<string, MotivoLead[]> = {};
+
+  function addLeadToMotivo(motivo: string, lead: Lead) {
+    const m = motivo.trim();
+    motivoMap[m] = (motivoMap[m] ?? 0) + 1;
+    if (!leadsByMotivo[m]) leadsByMotivo[m] = [];
+    // Evita duplicatas
+    if (!leadsByMotivo[m].some(x => x.id === lead.id)) {
+      leadsByMotivo[m].push({
+        id: lead.id,
+        nome: lead.nome,
+        tel: lead.tel,
+        orig: lead.orig,
+        seg: lead.seg,
+        valor: getLeadValor(lead),
+        dataPerdido: lead.status_changed_at
+          ? new Date(lead.status_changed_at).toLocaleDateString('pt-BR')
+          : lead.data ?? '',
+      });
+    }
+  }
 
   // 1. Motivos salvos diretamente na coluna (via fix do moveLead)
   all.filter(l => l.status === 'perdido' && l.motivo_perda).forEach(l => {
-    const m = l.motivo_perda!.trim();
-    motivoMap[m] = (motivoMap[m] ?? 0) + 1;
+    addLeadToMotivo(l.motivo_perda!, l);
   });
 
   // 2. Motivos históricos (leads perdidos SEM motivo_perda na coluna)
   const leadsSemMotivo = new Set(
     all.filter(l => l.status === 'perdido' && !l.motivo_perda).map(l => l.id)
   );
+  const leadById = Object.fromEntries(all.map(l => [l.id, l]));
   motivosHistorico
     .filter(h => leadsSemMotivo.has(h.lead_id))
     .forEach(h => {
-      // Extrai texto depois de "Motivo de perda:"
       const match = h.descricao.match(/Motivo de perda:\s*(.+)/i);
-      if (match?.[1]) {
-        const m = match[1].trim();
-        motivoMap[m] = (motivoMap[m] ?? 0) + 1;
+      if (match?.[1] && leadById[h.lead_id]) {
+        addLeadToMotivo(match[1], leadById[h.lead_id]);
       }
     });
 
@@ -478,6 +509,7 @@ function buildMetrics(
     alertasParados,
     alertasFollowup,
     alertasSemMotivo,
+    leadsByMotivo,
     totalLeads: all.length,
     loading: false,
     error: null,

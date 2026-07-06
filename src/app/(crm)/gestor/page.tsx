@@ -1,9 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useCRM } from '@/store/crm-store';
-import { useGestorMetrics, LABEL_ETAPA, COR_ETAPA } from '@/hooks/useGestorMetrics';
+import { useGestorMetrics, LABEL_ETAPA, COR_ETAPA, type MotivoLead } from '@/hooks/useGestorMetrics';
 
 // ── Formatação ────────────────────────────────────────────────────────────────
 function fmtR(v: number) {
@@ -32,7 +32,7 @@ function TrendBadge({ pct }: { pct: number }) {
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function GestorPage() {
   const router = useRouter();
-  const { state } = useCRM();
+  const { state, dispatch } = useCRM();
   const m = useGestorMetrics();
 
   useEffect(() => {
@@ -40,6 +40,9 @@ export default function GestorPage() {
       router.replace('/dashboard');
     }
   }, [state.currentUser, router]);
+
+  const [motivoSel, setMotivoSel] = useState<string | null>(null);
+  const motivoLeads: MotivoLead[] = motivoSel ? (m.leadsByMotivo[motivoSel] ?? []) : [];
 
   if (!state.currentUser) return null;
   if (state.currentUser.role !== 'admin') return null;
@@ -273,20 +276,34 @@ export default function GestorPage() {
             </div>
           </div>
 
-          {/* Motivos de perda */}
+          {/* Motivos de perda — clicáveis */}
           <div className="dash-meta">
-            <div className="dash-section-title">Motivos de Perda</div>
+            <div className="dash-section-title">Motivos de Perda
+              <span style={{ fontSize: 9, fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>clique para ver os leads</span>
+            </div>
             {m.motivosPerdas.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 8, padding: '24px 0', color: 'var(--text3)', fontSize: 12 }}>
                 <div style={{ fontSize: 28 }}>✅</div>
                 Nenhum motivo registrado ainda
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {m.motivosPerdas.slice(0, 6).map((mp, i) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>{mp.motivo}</span>
+                  <div key={i}
+                    onClick={() => setMotivoSel(motivoSel === mp.motivo ? null : mp.motivo)}
+                    style={{
+                      cursor: 'pointer', padding: '8px 10px', borderRadius: 8,
+                      background: motivoSel === mp.motivo ? 'rgba(239,68,68,0.1)' : 'transparent',
+                      border: `1px solid ${motivoSel === mp.motivo ? 'rgba(239,68,68,0.3)' : 'transparent'}`,
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { if (motivoSel !== mp.motivo) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseLeave={e => { if (motivoSel !== mp.motivo) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: motivoSel === mp.motivo ? '#EF4444' : 'var(--text2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8, fontWeight: motivoSel === mp.motivo ? 700 : 400 }}>
+                        {mp.motivo}
+                      </span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', flexShrink: 0 }}>{mp.count}×</span>
                     </div>
                     <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
@@ -416,7 +433,117 @@ export default function GestorPage() {
 
       </div>
       </div>
-      <style>{`@keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }`}</style>
+
+      {/* ── Painel lateral: leads perdidos por motivo ── */}
+      {motivoSel && (
+        <div style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 200,
+          width: 360, background: 'var(--bg2)', borderLeft: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+          animation: 'slideInRight 0.22s ease',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Motivo de perda</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', lineHeight: 1.3 }}>{motivoSel}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 5 }}>
+                  {motivoLeads.length} lead{motivoLeads.length !== 1 ? 's' : ''} · clique para abrir no pipeline
+                </div>
+              </div>
+              <button onClick={() => setMotivoSel(null)} style={{
+                background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)',
+                borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 16,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>×</button>
+            </div>
+            {/* Dica de ação */}
+            <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(201,162,39,0.08)', border: '1px solid rgba(201,162,39,0.15)', borderRadius: 8 }}>
+              <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 700, marginBottom: 3 }}>💡 Ação de resgate</div>
+              <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.5 }}>
+                Crie uma campanha ou abordagem específica para estes leads. Timing e preço são frequentemente reversíveis.
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de leads */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {motivoLeads.map((lead) => (
+              <div key={lead.id}
+                onClick={() => { dispatch({ type: 'SET_ACTIVE_LEAD', payload: lead.id }); router.push('/pipeline'); }}
+                style={{
+                  padding: '12px 14px', background: 'var(--bg3)', borderRadius: 10,
+                  border: '1px solid var(--border)', cursor: 'pointer',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(239,68,68,0.3)'; (e.currentTarget as HTMLDivElement).style.background = 'rgba(239,68,68,0.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg3)'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 800,
+                  }}>
+                    {lead.nome.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.nome}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+                      {[lead.seg, lead.orig].filter(Boolean).join(' · ') || '—'}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      {lead.valor > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)' }}>
+                          R$ {lead.valor.toLocaleString('pt-BR')}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 9, color: 'var(--text3)' }}>perdido em {lead.dataPerdido}</span>
+                    </div>
+                  </div>
+                  {/* WhatsApp */}
+                  {lead.tel && (
+                    <button
+                      onClick={e => { e.stopPropagation(); window.open(`https://wa.me/55${lead.tel!.replace(/\D/g,'')}`, '_blank'); }}
+                      style={{
+                        flexShrink: 0, background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.2)',
+                        color: '#25D366', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', fontSize: 10, fontWeight: 700,
+                      }}
+                    >WA</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer com total de valor perdido */}
+          {motivoLeads.some(l => l.valor > 0) && (
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>Receita potencial perdida</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#EF4444' }}>
+                  R$ {motivoLeads.reduce((s, l) => s + l.valor, 0).toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {/* Overlay escuro quando painel aberto */}
+      {motivoSel && (
+        <div onClick={() => setMotivoSel(null)} style={{
+          position: 'fixed', inset: 0, zIndex: 199,
+          background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)',
+        }} />
+      )}
+
+      <style>{`
+        @keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
+        @keyframes slideInRight { from{transform:translateX(100%)} to{transform:translateX(0)} }
+      `}</style>
     </div>
   );
 }

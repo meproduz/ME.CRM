@@ -157,9 +157,20 @@ export default function GestorPage() {
                 const cor = COR_ETAPA[e.status] ?? 'var(--gold)';
                 return (
                   <div key={e.status}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
                       <span style={{ fontSize: 11, color: 'var(--text2)' }}>{LABEL_ETAPA[e.status]}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: cor }}>{e.count}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {e.diasMedioNaEtapa !== null && e.count > 0 && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, color: e.diasMedioNaEtapa >= 14 ? '#EF4444' : e.diasMedioNaEtapa >= 7 ? '#F97316' : 'var(--text3)',
+                            background: e.diasMedioNaEtapa >= 14 ? 'rgba(239,68,68,0.1)' : e.diasMedioNaEtapa >= 7 ? 'rgba(249,115,22,0.1)' : 'var(--bg3)',
+                            padding: '1px 6px', borderRadius: 20,
+                          }}>
+                            ⏱ {e.diasMedioNaEtapa}d
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: cor }}>{e.count}</span>
+                      </div>
                     </div>
                     <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: cor, borderRadius: 99, transition: 'width 0.6s ease' }} />
@@ -170,7 +181,7 @@ export default function GestorPage() {
             </div>
             {m.tempoMedioHoras !== null && (
               <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: 'var(--text3)' }}>Tempo médio por etapa</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>Tempo médio de avanço entre etapas</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>
                   {m.tempoMedioHoras < 24 ? `${m.tempoMedioHoras}h` : `${Math.round(m.tempoMedioHoras / 24)}d`}
                 </span>
@@ -280,22 +291,23 @@ export default function GestorPage() {
         {/* ══ ALERTAS ══ */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
 
-          {/* Leads parados */}
+          {/* Leads parados na etapa */}
           <div className="dash-meta">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🕐</div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#F97316', lineHeight: 1 }}>{m.alertasParados.length}</div>
-                <div style={{ fontSize: 10, color: 'var(--text3)' }}>Leads parados +7 dias</div>
+                <div style={{ fontSize: 10, color: 'var(--text3)' }}>Parados na etapa +7 dias</div>
               </div>
             </div>
             {m.alertasParados.length === 0 ? (
               <div style={{ fontSize: 11, color: '#22C55E', textAlign: 'center', padding: '8px 0' }}>✅ Nenhum lead parado</div>
             ) : (
               m.alertasParados.slice(0, 5).map(a => (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text2)', padding: '5px 0', borderTop: '1px solid var(--border)' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>{a.nome}</span>
-                  <span style={{ color: '#F97316', fontWeight: 700, flexShrink: 0 }}>{a.diasParado}d</span>
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text2)', padding: '5px 0', borderTop: '1px solid var(--border)', gap: 6 }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{a.nome}</span>
+                  <span style={{ fontSize: 9, color: 'var(--text3)', flexShrink: 0, whiteSpace: 'nowrap' }}>{LABEL_ETAPA[a.status] ?? a.status}</span>
+                  <span style={{ color: a.diasParado >= 14 ? '#EF4444' : '#F97316', fontWeight: 700, flexShrink: 0 }}>{a.diasParado}d</span>
                 </div>
               ))
             )}

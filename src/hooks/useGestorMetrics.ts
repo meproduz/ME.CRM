@@ -51,6 +51,7 @@ export interface EtapaMetric {
   pctConversao: number;
   forecastPonderado: number;
   tempoMedioHoras: number | null;
+  diasMedioNaEtapa: number | null; // média de dias que leads ativos estão nesta etapa
 }
 
 export interface MesMetric {
@@ -298,6 +299,16 @@ function buildMetrics(
     const tempoMedio = tempos.length >= 1
       ? Math.round(tempos.reduce((s, t) => s + t, 0) / tempos.length) : null;
 
+    // Média de dias que os leads ATIVOS estão nesta etapa agora (usa status_changed_at)
+    let diasMedioNaEtapa: number | null = null;
+    if (status !== 'fechado' && status !== 'perdido' && leadsNaEtapa.length > 0) {
+      const diasArr = leadsNaEtapa.map(l => {
+        const ref = l.status_changed_at ?? l.created_at;
+        return Math.floor((agora.getTime() - new Date(ref).getTime()) / 86_400_000);
+      });
+      diasMedioNaEtapa = Math.round(diasArr.reduce((s, d) => s + d, 0) / diasArr.length);
+    }
+
     return {
       status, label: LABEL_ETAPA[status], cor: COR_ETAPA[status],
       count, valor,
@@ -305,6 +316,7 @@ function buildMetrics(
       pctConversao,
       forecastPonderado: count * (PROB_ETAPA[status] ?? 0) * (valor / (count || 1)),
       tempoMedioHoras: tempoMedio,
+      diasMedioNaEtapa,
     };
   });
 
@@ -415,11 +427,12 @@ function buildMetrics(
   // ── Alertas ───────────────────────────────────────────────────────────────────
   const hoje = new Date();
 
+  // Alertas: tempo na etapa atual — usa status_changed_at (não atividade/nota)
   const alertasParados: AlertaLead[] = all
     .filter(l => l.status !== 'fechado' && l.status !== 'perdido')
     .map(l => {
-      const ultimaAtvStr = ultimaAtividade[l.id] ?? l.created_at;
-      const dias = Math.floor((hoje.getTime() - new Date(ultimaAtvStr).getTime()) / 86_400_000);
+      const ref = l.status_changed_at ?? l.created_at;
+      const dias = Math.floor((hoje.getTime() - new Date(ref).getTime()) / 86_400_000);
       return { id: l.id, nome: l.nome, status: l.status, diasParado: dias };
     })
     .filter(a => a.diasParado >= 7)

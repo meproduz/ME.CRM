@@ -5,6 +5,133 @@ import { useEffect, useState } from 'react';
 import { useCRM } from '@/store/crm-store';
 import { useGestorMetrics, LABEL_ETAPA, COR_ETAPA, type MotivoLead } from '@/hooks/useGestorMetrics';
 
+// ── Ações de resgate por motivo ───────────────────────────────────────────────
+interface AcaoResgate {
+  icon: string;
+  label: string;
+  desc: string;
+  template: string;
+  cor: string;
+}
+
+function getAcoesResgate(motivo: string): AcaoResgate[] {
+  const m = motivo.toLowerCase();
+
+  // Preço / Valor / Custo
+  if (/preço|preco|caro|valor|custo|orçamento|orcamento|barato|invest/.test(m)) return [
+    {
+      icon: '💰', label: 'Condição especial', cor: '#C9A227',
+      desc: 'Ofereça um desconto ou bônus pontual com urgência',
+      template: 'Olá {nome}! Tenho uma condição especial disponível essa semana que acho que vai fazer mais sentido pra você. Posso te apresentar rapidinho?',
+    },
+    {
+      icon: '📦', label: 'Plano de entrada', cor: '#3B82F6',
+      desc: 'Sugira começar com um pacote menor e crescer junto',
+      template: 'Olá {nome}! Pensando melhor, temos uma forma de começar menor e ir escalando conforme você vê resultado. Quer entender como funciona?',
+    },
+    {
+      icon: '💳', label: 'Parcelamento', cor: '#22C55E',
+      desc: 'Apresente opção parcelada que caiba no orçamento',
+      template: 'Olá {nome}! Consegui uma forma de parcelar o investimento que fica bem acessível por mês. Vale a pena a gente conversar?',
+    },
+  ];
+
+  // Timing / Momento / Prazo
+  if (/timing|momento|hora|agora|depois|futuro|prazo|mês|mes|trimestre|ano/.test(m)) return [
+    {
+      icon: '📅', label: 'Retomar em 30 dias', cor: '#F97316',
+      desc: 'Agende um contato para quando o momento melhorar',
+      template: 'Olá {nome}! Sei que o momento não era ideal. Passando pra perguntar se as coisas ficaram mais tranquilas e se faz sentido a gente conversar de novo?',
+    },
+    {
+      icon: '📱', label: 'Nutrição de valor', cor: '#8B5CF6',
+      desc: 'Envie conteúdo útil sem pressão de venda',
+      template: 'Olá {nome}! Pensei em você ao ver isso e queria compartilhar — pode ser relevante pro seu momento atual. Abraço!',
+    },
+    {
+      icon: '🎯', label: 'Nova proposta em 60d', cor: '#C9A227',
+      desc: 'Reaborde com ângulo diferente após 60 dias',
+      template: 'Olá {nome}! Faz um tempo desde nosso último papo. Temos novidades que podem se encaixar melhor na sua realidade agora. Posso apresentar?',
+    },
+  ];
+
+  // Concorrência / Já tem / Outro fornecedor
+  if (/concorrên|concorren|outro|fornecedor|já tem|ja tem|contrat|parceiro/.test(m)) return [
+    {
+      icon: '🏆', label: 'Apresentar diferencial', cor: '#C9A227',
+      desc: 'Destaque o que a MP faz que o concorrente não faz',
+      template: 'Olá {nome}! Entendo que você escolheu outro caminho. Temos clientes que também vieram de outras agências e adoram comparar os resultados. Posso te mostrar a diferença?',
+    },
+    {
+      icon: '📊', label: 'Case de resultado', cor: '#22C55E',
+      desc: 'Compartilhe resultado concreto de cliente similar',
+      template: 'Olá {nome}! Acabamos de fechar um case incrível com um cliente do mesmo segmento que o seu. Posso te mostrar o que alcançamos em 90 dias?',
+    },
+    {
+      icon: '🤝', label: 'Parceria futura', cor: '#3B82F6',
+      desc: 'Mantenha a porta aberta para quando mudar de ideia',
+      template: 'Olá {nome}! Sem pressão, só queria manter o contato. Se em algum momento precisar de uma segunda opinião ou quiser comparar, estou aqui!',
+    },
+  ];
+
+  // Sem interesse / Não precisa
+  if (/interesse|precisa|não quer|nao quer|irrelevante|não vejo|nao vejo/.test(m)) return [
+    {
+      icon: '🎯', label: 'Nova dor identificada', cor: '#EF4444',
+      desc: 'Aborde com ângulo diferente focado em outra dor',
+      template: 'Olá {nome}! Estou com uma pergunta rápida — percebi uma oportunidade no seu negócio que talvez não tenhamos falado antes. Topa 5 minutos?',
+    },
+    {
+      icon: '📚', label: 'Conteúdo educativo', cor: '#8B5CF6',
+      desc: 'Envie conteúdo que gere consciência do problema',
+      template: 'Olá {nome}! Sem compromisso, queria compartilhar algo que tem ajudado muito negócios parecidos com o seu. Espero que seja útil!',
+    },
+    {
+      icon: '⏸️', label: 'Retorno em 90 dias', cor: '#6E6E80',
+      desc: 'Dê espaço e retome quando o cenário mudar',
+      template: 'Olá {nome}! Passando só pra dizer oi e ver como as coisas estão. Se em algum momento fizer sentido conversar sobre crescimento, estarei aqui!',
+    },
+  ];
+
+  // Não respondeu / Sumiu / Ghosting
+  if (/respond|sumiu|contato|retorn|visu|ghost|desaparec/.test(m)) return [
+    {
+      icon: '💬', label: 'Mensagem break-up', cor: '#EF4444',
+      desc: 'Última tentativa direta e honesta — alta taxa de resposta',
+      template: 'Olá {nome}! Últimas tentativas de contato sem retorno, então vou entender que não é o momento certo. Se mudar de ideia, a porta fica aberta. Abraço!',
+    },
+    {
+      icon: '😊', label: 'Check-in informal', cor: '#F97316',
+      desc: 'Mensagem curta e leve, sem falar de venda',
+      template: 'Olá {nome}! Tudo bem por aí? Passando rapidinho só pra dar um oi! 😊',
+    },
+    {
+      icon: '🎁', label: 'Oferta surpresa', cor: '#C9A227',
+      desc: 'Ofereça algo grátis (diagnóstico, consultoria) como gancho',
+      template: 'Olá {nome}! Estou oferecendo um diagnóstico gratuito do marketing digital essa semana pra alguns contatos selecionados. Topa?',
+    },
+  ];
+
+  // Padrão genérico
+  return [
+    {
+      icon: '📱', label: 'Recontato suave', cor: '#AEAEC0',
+      desc: 'Mensagem leve e sem pressão para reabrir o canal',
+      template: 'Olá {nome}! Passando pra dar um oi e ver se surgiu alguma novidade por aí. Se precisar de algo, estou à disposição!',
+    },
+    {
+      icon: '🎯', label: 'Nova proposta', cor: '#C9A227',
+      desc: 'Reaborde com proposta atualizada e diferente',
+      template: 'Olá {nome}! Temos algumas novidades desde nosso último papo. Vale 10 minutos pra eu te mostrar?',
+    },
+    {
+      icon: '📅', label: 'Agendar conversa', cor: '#3B82F6',
+      desc: 'Proponha uma reunião rápida sem compromisso',
+      template: 'Olá {nome}! Queria bater um papo de 15 minutos, sem compromisso. Quando você teria um momento essa semana?',
+    },
+  ];
+}
+
 // ── Formatação ────────────────────────────────────────────────────────────────
 function fmtR(v: number) {
   if (v >= 1_000_000) return `R$${(v / 1_000_000).toFixed(1)}M`;
@@ -42,6 +169,8 @@ export default function GestorPage() {
   }, [state.currentUser, router]);
 
   const [motivoSel, setMotivoSel] = useState<string | null>(null);
+  const [selectedAcao, setSelectedAcao] = useState(0);
+  useEffect(() => { setSelectedAcao(0); }, [motivoSel]);
   const motivoLeads: MotivoLead[] = motivoSel ? (m.leadsByMotivo[motivoSel] ?? []) : [];
 
   if (!state.currentUser) return null;
@@ -458,13 +587,39 @@ export default function GestorPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}>×</button>
             </div>
-            {/* Dica de ação */}
-            <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(201,162,39,0.08)', border: '1px solid rgba(201,162,39,0.15)', borderRadius: 8 }}>
-              <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 700, marginBottom: 3 }}>💡 Ação de resgate</div>
-              <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.5 }}>
-                Crie uma campanha ou abordagem específica para estes leads. Timing e preço são frequentemente reversíveis.
-              </div>
-            </div>
+            {/* Ações de resgate dinâmicas */}
+            {(() => {
+              const acoes = getAcoesResgate(motivoSel);
+              const acao = acoes[Math.min(selectedAcao, acoes.length - 1)];
+              return (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>
+                    Ações de resgate
+                  </div>
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {acoes.map((a, i) => (
+                      <button key={i}
+                        onClick={e => { e.stopPropagation(); setSelectedAcao(i); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '4px 10px', borderRadius: 20, cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                          border: `1px solid ${selectedAcao === i ? a.cor : 'var(--border)'}`,
+                          background: selectedAcao === i ? `${a.cor}22` : 'var(--bg3)',
+                          color: selectedAcao === i ? a.cor : 'var(--text3)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {a.icon} {a.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ padding: '8px 12px', background: `${acao.cor}14`, border: `1px solid ${acao.cor}35`, borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: acao.cor, fontWeight: 700, marginBottom: 2 }}>{acao.icon} {acao.label}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.5 }}>{acao.desc}</div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Lista de leads */}
@@ -507,7 +662,14 @@ export default function GestorPage() {
                   {/* WhatsApp */}
                   {lead.tel && (
                     <button
-                      onClick={e => { e.stopPropagation(); window.open(`https://wa.me/55${lead.tel!.replace(/\D/g,'')}`, '_blank'); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        const acoes = getAcoesResgate(motivoSel!);
+                        const acao = acoes[Math.min(selectedAcao, acoes.length - 1)];
+                        const texto = acao.template.replace('{nome}', lead.nome.split(' ')[0]);
+                        window.open(`https://wa.me/55${lead.tel!.replace(/\D/g,'')}?text=${encodeURIComponent(texto)}`, '_blank');
+                      }}
+                      title={`Enviar via WhatsApp — "${getAcoesResgate(motivoSel!)[Math.min(selectedAcao, getAcoesResgate(motivoSel!).length-1)].label}"`}
                       style={{
                         flexShrink: 0, background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.2)',
                         color: '#25D366', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', fontSize: 10, fontWeight: 700,

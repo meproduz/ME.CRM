@@ -120,6 +120,66 @@ export default function GestorPage() {
           ))}
         </div>
 
+        {/* ══ META DO MÊS ══ */}
+        {m.metaMensal > 0 && (() => {
+          const pctMeta = Math.min(Math.round((m.receitaNoMes / m.metaMensal) * 100), 100);
+          const pctForecast = Math.min(Math.round((m.forecastComFechados / m.metaMensal) * 100), 100);
+          const falta = Math.max(0, m.metaMensal - m.receitaNoMes);
+          const R = 52, cx = 68, cy = 68, sw = 10;
+          const circ = 2 * Math.PI * R;
+          const dash = (pctMeta / 100) * circ;
+          const corProb = m.probBaterMeta >= 80 ? '#22C55E' : m.probBaterMeta >= 50 ? '#F97316' : '#EF4444';
+          return (
+            <div className="dash-meta" style={{ background: 'linear-gradient(145deg,rgba(201,162,39,0.07) 0%,rgba(201,162,39,0.02) 100%)', border: '1px solid rgba(201,162,39,0.15)' }}>
+              <div className="dash-section-title">Meta do Mês
+                <span style={{ fontWeight: 400, color: 'var(--text3)', fontSize: 10 }}>&nbsp;· {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 14 }}>
+                {/* Arc */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <svg width="136" height="136" viewBox="0 0 136 136">
+                    <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw}/>
+                    {pctMeta > 0 && (
+                      <circle cx={cx} cy={cy} r={R} fill="none" stroke="#C9A227" strokeWidth={sw}
+                        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+                        transform={`rotate(-90 ${cx} ${cy})`}
+                        style={{ transition: 'stroke-dasharray 0.8s ease', filter: 'drop-shadow(0 0 6px rgba(201,162,39,0.4))' }}
+                      />
+                    )}
+                    <text x={cx} y={cy - 4} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="20" fontWeight="800" fill="#fff">{pctMeta}%</text>
+                    <text x={cx} y={cy + 13} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="9" fill="#555">atingido</text>
+                  </svg>
+                </div>
+                {/* Barras */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    { label: 'Receita fechada',    val: fmtR(m.receitaNoMes),       pct: pctMeta,                           color: '#C9A227' },
+                    { label: 'Forecast total',      val: fmtR(m.forecastComFechados), pct: pctForecast,                       color: '#3B82F6' },
+                    { label: 'Faltam para a meta', val: fmtR(falta),                pct: Math.min(Math.round((falta / m.metaMensal) * 100), 100), color: '#EF4444' },
+                  ].map((b) => (
+                    <div key={b.label}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <span style={{ fontSize: 10, color: 'var(--text2)' }}>{b.label}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: b.color }}>{b.val}</span>
+                      </div>
+                      <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                        <div style={{ width: `${b.pct}%`, height: '100%', background: b.color, borderRadius: 2, transition: 'width 0.8s ease' }} />
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Prob. de bater a meta</div>
+                      <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 1 }}>Meta: {fmtR(m.metaMensal)}</div>
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: corProb }}>{m.probBaterMeta}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ══ FORECAST + FUNIL ══ */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 

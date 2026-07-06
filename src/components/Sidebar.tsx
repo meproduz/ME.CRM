@@ -46,6 +46,17 @@ export default function Sidebar() {
     (l) => l.status === 'novo' || isStale(l.hist, l.data, l.status)
   ).length;
 
+  const followupsVencidos = state.leads.filter((l) => {
+    if (!l.followup || l.status === 'fechado' || l.status === 'perdido') return false;
+    const [d, mo, y] = (l.followup ?? '').split('/').map(Number);
+    if (!d || !mo || !y) return false;
+    const fuDate = new Date(y, mo - 1, d);
+    fuDate.setHours(23, 59, 59, 0);
+    return fuDate < new Date();
+  }).length;
+
+  const totalAlertas = urgentes + followupsVencidos;
+
   const userInitials = (state.currentUser?.nome ?? 'MP')
     .split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
@@ -66,6 +77,10 @@ export default function Sidebar() {
       <div className="nav-section">
         {NAV_VENDEDOR.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          // Badge: Pipeline mostra urgentes, Dashboard mostra follow-ups vencidos
+          const badgeCount =
+            item.href === '/pipeline' ? urgentes :
+            item.href === '/dashboard' ? followupsVencidos : 0;
           return (
             <div
               key={item.href}
@@ -74,8 +89,10 @@ export default function Sidebar() {
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-text">{item.label}</span>
-              {item.badge && urgentes > 0 && (
-                <span className="nav-badge" style={{ display: 'block' }}>{urgentes}</span>
+              {badgeCount > 0 && (
+                <span className="nav-badge" style={{ display: 'block',
+                  background: item.href === '/dashboard' ? '#F97316' : undefined,
+                }}>{badgeCount}</span>
               )}
             </div>
           );
@@ -111,6 +128,30 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
+        {/* Resumo de alertas */}
+        {totalAlertas > 0 && (
+          <div style={{
+            margin: '0 10px 8px', padding: '8px 12px', borderRadius: 10,
+            background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.18)',
+            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+          }} onClick={() => router.push('/dashboard')}>
+            <div style={{
+              width: 22, height: 22, borderRadius: '50%', background: '#F97316',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 10, fontWeight: 800, color: '#fff', flexShrink: 0,
+            }}>{totalAlertas}</div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316' }}>
+                {totalAlertas} alerta{totalAlertas > 1 ? 's' : ''}
+              </div>
+              <div style={{ fontSize: 9, color: 'var(--text3)', lineHeight: 1.3 }}>
+                {urgentes > 0 && `${urgentes} urgente${urgentes > 1 ? 's' : ''}`}
+                {urgentes > 0 && followupsVencidos > 0 && ' · '}
+                {followupsVencidos > 0 && `${followupsVencidos} FU vencido${followupsVencidos > 1 ? 's' : ''}`}
+              </div>
+            </div>
+          </div>
+        )}
         <div
           className={`nav-item${pathname === '/configuracoes' ? ' active' : ''}`}
           onClick={() => router.push('/configuracoes')}

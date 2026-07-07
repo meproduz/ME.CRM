@@ -37,7 +37,12 @@ const NAV_ADMIN_EXTRA = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useCRM();
@@ -60,6 +65,11 @@ export default function Sidebar() {
   const userInitials = (state.currentUser?.nome ?? 'MP')
     .split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
+  function handleNav(href: string) {
+    router.push(href);
+    onMobileClose?.();
+  }
+
   async function handleLogout() {
     if (!confirm('Sair do sistema?')) return;
     await supabase.auth.signOut();
@@ -67,9 +77,9 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${mobileOpen ? ' mob-open' : ''}`}>
       {/* Logo */}
-      <div className="sidebar-logo" onClick={() => router.push('/dashboard')} style={{ cursor: 'pointer' }}>
+      <div className="sidebar-logo" onClick={() => handleNav('/dashboard')} style={{ cursor: 'pointer' }}>
         <Logo variant="sidebar" />
       </div>
 
@@ -77,7 +87,6 @@ export default function Sidebar() {
       <div className="nav-section">
         {NAV_VENDEDOR.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-          // Badge: Pipeline mostra urgentes, Dashboard mostra follow-ups vencidos
           const badgeCount =
             item.href === '/pipeline' ? urgentes :
             item.href === '/dashboard' ? followupsVencidos : 0;
@@ -85,7 +94,7 @@ export default function Sidebar() {
             <div
               key={item.href}
               className={`nav-item${isActive ? ' active' : ''}`}
-              onClick={() => router.push(item.href)}
+              onClick={() => handleNav(item.href)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-text">{item.label}</span>
@@ -107,7 +116,7 @@ export default function Sidebar() {
                 <div
                   key={item.href}
                   className={`nav-item${isActive ? ' active' : ''}`}
-                  onClick={() => router.push(item.href)}
+                  onClick={() => handleNav(item.href)}
                   style={item.gold ? {
                     color: 'var(--gold)',
                     borderColor: isActive ? 'rgba(212,175,55,0.3)' : 'transparent',
@@ -128,13 +137,12 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-        {/* Resumo de alertas */}
         {totalAlertas > 0 && (
           <div style={{
             margin: '0 10px 8px', padding: '8px 12px', borderRadius: 10,
             background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.18)',
             display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-          }} onClick={() => router.push('/dashboard')}>
+          }} onClick={() => handleNav('/dashboard')}>
             <div style={{
               width: 22, height: 22, borderRadius: '50%', background: '#F97316',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -154,7 +162,7 @@ export default function Sidebar() {
         )}
         <div
           className={`nav-item${pathname === '/configuracoes' ? ' active' : ''}`}
-          onClick={() => router.push('/configuracoes')}
+          onClick={() => handleNav('/configuracoes')}
           style={{ border: '1px solid transparent' }}
         >
           <span className="nav-icon">

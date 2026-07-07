@@ -1989,6 +1989,58 @@ input:-webkit-autofill:focus {
 
 .dash-chart-card { padding: 22px 24px; }
 
+/* ══════════════════════════════════════════════════════
+   MOBILE SIDEBAR TOGGLE
+   ══════════════════════════════════════════════════════ */
+/* Hamburger — hidden on desktop, shown on mobile */
+.mob-hamburger {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 14px;
+  z-index: 48; /* below overlay(49) and sidebar(50) */
+  width: 36px;
+  height: 36px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-sm);
+  align-items: center;
+  justify-content: center;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.mob-hamburger:hover { background: var(--bg4); color: var(--text); }
+
+/* Overlay — covers content when sidebar is open on mobile */
+.mob-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 49;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* ══════════════════════════════════════════════════════
+   GESTOR RESPONSIVE GRIDS
+   (class applied alongside inline style so !important
+    can override the inline gridTemplateColumns on mobile)
+   ══════════════════════════════════════════════════════ */
+.gestor-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.gestor-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
   .kpi-grid    { grid-template-columns: repeat(2,1fr); }
@@ -2002,42 +2054,106 @@ input:-webkit-autofill:focus {
 }
 
 @media (max-width: 768px) {
-  .sidebar      { transform: translateX(-100%); }
+  /* ── Sidebar toggle ── */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar.mob-open { transform: none !important; }
+
+  .mob-hamburger { display: flex; }
+  .mob-overlay   { display: block; }
+
+  /* ── Layout ── */
   .content      { margin-left: 0; }
+
+  /* ── Topbar: shift right to make room for hamburger ── */
+  .topbar { padding: 0 12px 0 58px; gap: 8px; }
+  .page-title { font-size: 13px; }
+
+  /* ── KPI Grids ── */
   .kpi-grid     { grid-template-columns: 1fr 1fr; }
   .meta-content { flex-direction: column; }
-  .pgrid        { grid-template-columns: 1fr; }
 
   /* KPI V2: 2 colunas no mobile */
   .kpi-v2-grid  { grid-template-columns: repeat(2, 1fr); }
   .kpi-v2-value { font-size: 22px; }
 
-  /* Atividade recente: 1 coluna no mobile */
+  /* ── Atividade recente: 1 coluna no mobile ── */
   .atv-list { grid-template-columns: 1fr; }
 
-  /* Stat strip: 2 colunas no mobile */
-  .stat-strip        { grid-template-columns: repeat(2, 1fr); }
-  .stat-item + .stat-item { border-left: none; }
-  .stat-item:nth-child(2n)   { border-left: 1px solid var(--border); }
-  .stat-item:nth-child(n+3)  { border-top: 1px solid var(--border); }
-  .stat-value        { font-size: 20px; }
-  .stat-item         { padding: 14px 16px; }
+  /* ── Stat strip: 2 colunas no mobile ── */
+  .stat-strip              { grid-template-columns: repeat(2, 1fr); }
+  .stat-item + .stat-item  { border-left: none; }
+  .stat-item:nth-child(2n) { border-left: 1px solid var(--border); }
+  .stat-item:nth-child(n+3){ border-top: 1px solid var(--border); }
+  .stat-value              { font-size: 20px; }
+  .stat-item               { padding: 14px 16px; }
 
-  /* Hero */
-  .dash-greeting     { font-size: 17px; }
-  .dash-hero         { padding: 2px 0; }
+  /* ── Hero ── */
+  .dash-greeting { font-size: 17px; }
+  .dash-hero     { padding: 16px 18px; }
 
-  /* Botão Novo Lead — só ícone no mobile */
-  .add-btn {
-    padding: 7px 9px;
-    gap: 0;
-  }
+  /* ── Botão Novo Lead — só ícone no mobile ── */
+  .add-btn { padding: 7px 9px; gap: 0; }
   .add-btn .btn-text { display: none; }
 
-  /* Search menor */
-  .search-box input { width: 100px; }
+  /* ── Search menor ── */
+  .search-box input { width: 90px; }
   .search-box { padding: 6px 10px; }
 
-  .topbar { padding: 0 14px; gap: 8px; }
-  .page-title { font-size: 13px; }
+  /* ── Panel fields: 1 coluna ── */
+  .pgrid { grid-template-columns: 1fr; }
+
+  /* ── Lead Panel: tela cheia no mobile ── */
+  .lead-panel {
+    width: 100% !important;
+    left: 0 !important;
+    box-shadow: none;
+    border-left: none;
+  }
+
+  /* ── Pipeline board: scroll vertical livre ── */
+  .board-outer {
+    overflow-y: auto !important;
+    padding: 10px 10px !important;
+  }
+  .board {
+    height: auto !important;
+    min-height: 55vh;
+  }
+  .col { max-height: 78vh !important; }
+
+  /* ── Pipeline filter bar ── */
+  .filters-bar {
+    padding: 8px 10px !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Gestor grids: empilhar em coluna única ── */
+  .gestor-grid-2 { grid-template-columns: 1fr !important; }
+  .gestor-grid-3 { grid-template-columns: 1fr !important; }
+
+  /* ── Gestor motivo panel: tela cheia no mobile ── */
+  .gestor-motivo-panel {
+    width: 100% !important;
+    left: 0 !important;
+    border-left: none !important;
+  }
+
+  /* ── Config page: empilhar campos ── */
+  .config-row    { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .config-input  { width: 100%; }
+
+  /* ── Modal: ajuste de espaçamento no mobile ── */
+  .modal {
+    padding: 22px 18px;
+    max-height: 90vh;
+    border-radius: var(--r-lg);
+  }
+
+  /* ── Rel grid: 2 cols on mobile ── */
+  .rel-grid    { grid-template-columns: repeat(2, 1fr); }
+  .rel-charts  { grid-template-columns: 1fr; }
 }

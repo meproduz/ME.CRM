@@ -85,7 +85,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Segment pills */}
-      <div style={{ padding: '8px 28px', background: 'var(--bg1)', borderBottom: '1px solid var(--border)' }}>
+      <div className="filters-bar" style={{ padding: '8px 28px', background: 'var(--bg1)', borderBottom: '1px solid var(--border)' }}>
         <div className="filters">
           {segs.map((s) => (
             <button key={s} className={`f-pill${state.activeSeg === s ? ' active' : ''}`}
@@ -97,7 +97,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Board */}
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', padding: '16px 28px' }}>
+      <div className="board-outer" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', padding: '16px 28px' }}>
         <div className="board" style={{ gridTemplateColumns: `repeat(${KANBAN_COLS.length}, minmax(0,1fr))`, minWidth: 900 }}>
           {KANBAN_COLS.map((col) => {
             const colLeads = fl.filter((l) => l.status === col.id);

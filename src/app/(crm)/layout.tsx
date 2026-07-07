@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CRMProvider, useCRM } from '@/store/crm-store';
@@ -14,6 +14,7 @@ import { alertManager } from '@/lib/alerts';
 function CRMInner({ children }: { children: React.ReactNode }) {
   const { dispatch } = useCRM();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -80,7 +81,24 @@ function CRMInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app">
-      <Sidebar />
+      {/* Hamburger — rendered outside <aside> to avoid CSS transform inheritance on mobile */}
+      <button
+        className="mob-hamburger"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Abrir menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+        </svg>
+      </button>
+
+      {/* Overlay — closes sidebar when tapping outside */}
+      {mobileOpen && (
+        <div className="mob-overlay" onClick={() => setMobileOpen(false)} />
+      )}
+
+      <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+
       <div className="content">
         <div className="body" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
           {children}

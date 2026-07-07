@@ -390,7 +390,7 @@ export default function GestorPage() {
         })()}
 
         {/* ══ FORECAST + FUNIL ══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
           {/* Forecast */}
           <div className="dash-meta">
@@ -460,7 +460,7 @@ export default function GestorPage() {
         </div>
 
         {/* ══ HISTÓRICO + MOTIVOS ══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
           {/* Histórico mensal */}
           <div className="dash-meta">
@@ -552,7 +552,7 @@ export default function GestorPage() {
         </div>
 
         {/* ══ ROI POR ORIGEM + QUALIDADE ══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
           {/* ROI por origem */}
           <div className="dash-meta">
@@ -625,7 +625,7 @@ export default function GestorPage() {
         </div>
 
         {/* ══ ALERTAS ══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        <div className="gestor-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
 
           {/* Leads parados na etapa */}
           <div className="dash-meta">
@@ -695,7 +695,7 @@ export default function GestorPage() {
 
       {/* ── Painel lateral: leads perdidos por motivo ── */}
       {motivoSel && (
-        <div style={{
+        <div className="gestor-motivo-panel" style={{
           position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 200,
           width: 360, background: 'var(--bg2)', borderLeft: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',

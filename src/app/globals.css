@@ -2043,18 +2043,10 @@ input:-webkit-autofill:focus {
   align-items: stretch;
 }
 
-/* Cards dentro dos grids do gestor sempre preenchem a altura da linha */
+/* Cards dentro dos grids do gestor — mesma altura na linha (desktop) */
 .gestor-grid-2 > .dash-meta,
 .gestor-grid-3 > .dash-meta {
   min-height: 280px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Conteúdo do card cresce para preencher o espaço disponível */
-.gestor-grid-2 > .dash-meta > *:last-child,
-.gestor-grid-3 > .dash-meta > *:last-child {
-  flex: 1;
 }
 
 /* ── Responsive ── */
@@ -2154,6 +2146,12 @@ input:-webkit-autofill:focus {
   /* ── Gestor grids: empilhar em coluna única ── */
   .gestor-grid-2 { grid-template-columns: 1fr !important; }
   .gestor-grid-3 { grid-template-columns: 1fr !important; }
+
+  /* ── Gestor cards: altura natural no mobile (sem min-height artificial) ── */
+  .gestor-grid-2 > .dash-meta,
+  .gestor-grid-3 > .dash-meta {
+    min-height: 0 !important;
+  }
 
   /* ── Gestor motivo panel: tela cheia no mobile ── */
   .gestor-motivo-panel {

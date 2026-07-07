@@ -59,7 +59,7 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Inter', 'Poppins', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -253,7 +253,7 @@ input:-webkit-autofill:focus {
   padding: 8px 9px;
   border-radius: var(--r-sm);
   color: var(--text2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
@@ -381,14 +381,14 @@ input:-webkit-autofill:focus {
 }
 
 .page-title {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.4px;
   color: var(--text);
 }
 
 .page-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   margin-top: 1px;
   letter-spacing: 0.1px;
@@ -562,7 +562,7 @@ input:-webkit-autofill:focus {
 }
 
 .kpi-val {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -1.2px;
@@ -745,9 +745,9 @@ input:-webkit-autofill:focus {
   letter-spacing: -0.5px;
 }
 .u-info   { flex: 1; min-width: 0; }
-.u-name   { font-size: 12px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.u-detail { font-size: 10px; color: var(--text2); margin-top: 2px; }
-.u-time   { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.u-name   { font-size: 13px; font-weight: 600; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.u-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.u-time   { font-size: 11px; color: var(--text3); margin-top: 1px; }
 .u-time.red { color: var(--red); }
 .u-actions  { display: flex; gap: 5px; flex-shrink: 0; }
 
@@ -896,10 +896,10 @@ input:-webkit-autofill:focus {
 .card.stale  { border-left: 2px solid var(--red); }
 .card.closed { border-left: 2px solid var(--green); }
 
-.card-name  { font-size: 12px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-seg   { font-size: 10px; color: var(--text2); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-time  { font-size: 9px; color: var(--text3); margin-bottom: 6px; }
-.card-valor { font-size: 11px; font-weight: 700; color: var(--gold2); margin-bottom: 6px; letter-spacing: -0.3px; }
+.card-name  { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-seg   { font-size: 12px; color: var(--text2); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-time  { font-size: 10px; color: var(--text3); margin-bottom: 6px; }
+.card-valor { font-size: 12px; font-weight: 700; color: var(--gold2); margin-bottom: 6px; letter-spacing: -0.3px; }
 .card-foot  { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
 .tag        { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
 .card-int   { font-size: 9px; color: var(--text3); margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
@@ -972,9 +972,9 @@ input:-webkit-autofill:focus {
   background: linear-gradient(180deg, var(--bg2) 0%, var(--bg1) 100%);
 }
 
-.panel-name    { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 3px; }
-.panel-seg     { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
-.panel-arrival { font-size: 10px; color: var(--text3); }
+.panel-name    { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 3px; }
+.panel-seg     { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
+.panel-arrival { font-size: 12px; color: var(--text3); }
 
 .panel-stale {
   display: inline-flex;
@@ -1003,7 +1003,7 @@ input:-webkit-autofill:focus {
 }
 .xbtn:hover { background: var(--bg4); color: var(--text); }
 
-.panel-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+.panel-body { flex: 1; overflow-y: auto; padding: 18px 22px; font-size: 14px; }
 
 .pval-badge {
   background: linear-gradient(135deg, rgba(201,162,39,0.1), rgba(201,162,39,0.04));
@@ -1028,7 +1028,7 @@ input:-webkit-autofill:focus {
   border-radius: var(--r-sm);
   padding: 8px 10px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 .pf input:focus, .pf select:focus {
@@ -1097,9 +1097,9 @@ input:-webkit-autofill:focus {
   border-radius: var(--r-sm);
   padding: 10px 11px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   resize: none;
-  height: 80px;
+  height: 90px;
   transition: border-color 0.12s;
   line-height: 1.6;
 }
@@ -1123,7 +1123,7 @@ input:-webkit-autofill:focus {
 .hist-title { font-size: 9px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; }
 
 .hist-item {
-  font-size: 11px; color: var(--text2);
+  font-size: 13px; color: var(--text2);
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
   line-height: 1.6;
@@ -1138,7 +1138,7 @@ input:-webkit-autofill:focus {
   margin-bottom: 6px;
 }
 .hist-nota-header { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
-.hist-nota-body   { font-size: 12px; color: var(--text); line-height: 1.6; }
+.hist-nota-body   { font-size: 13px; color: var(--text); line-height: 1.6; }
 
 /* Panel Footer */
 .panel-footer {
@@ -1204,17 +1204,17 @@ input:-webkit-autofill:focus {
   box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03);
   animation: slide-up 0.2s ease;
 }
-.modal h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 20px; }
+.modal h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 20px; }
 
-.mf { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; }
-.mf label { font-size: 9px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1.1px; }
+.mf { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.mf label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1.1px; }
 .mf input, .mf select, .mf textarea {
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: var(--r-sm);
-  padding: 9px 11px;
+  padding: 10px 12px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 14px;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 .mf input:focus, .mf select:focus, .mf textarea:focus {
@@ -1227,22 +1227,22 @@ input:-webkit-autofill:focus {
 .mfooter { display: flex; gap: 8px; justify-content: flex-end; margin-top: 22px; }
 
 .mcbtn {
-  padding: 9px 18px;
+  padding: 10px 20px;
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: var(--r-sm);
   color: var(--text2);
-  font-size: 12px; font-weight: 600;
+  font-size: 13px; font-weight: 600;
   transition: all 0.12s;
 }
 .mcbtn:hover { color: var(--text); }
 
 .msbtn {
-  padding: 9px 20px;
+  padding: 10px 22px;
   background: var(--gold);
   color: #080808;
   border-radius: var(--r-sm);
-  font-size: 12px; font-weight: 700;
+  font-size: 13px; font-weight: 700;
   transition: all 0.15s;
   box-shadow: 0 4px 16px rgba(201,162,39,0.25);
 }
@@ -1281,7 +1281,7 @@ input:-webkit-autofill:focus {
 .leads-table th {
   padding: 11px 15px;
   text-align: left;
-  font-size: 9px; font-weight: 600;
+  font-size: 10px; font-weight: 600;
   color: var(--text3);
   text-transform: uppercase; letter-spacing: 1.2px;
   border-bottom: 1px solid var(--border);
@@ -1289,7 +1289,7 @@ input:-webkit-autofill:focus {
 }
 .leads-table td {
   padding: 12px 15px;
-  font-size: 12px;
+  font-size: 13px;
   border-bottom: 1px solid var(--border);
   color: var(--text2);
 }
@@ -1422,16 +1422,16 @@ input:-webkit-autofill:focus {
 }
 
 .config-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.config-label { font-size: 12px; font-weight: 600; letter-spacing: -0.1px; margin-bottom: 2px; }
-.config-sub   { font-size: 10px; color: var(--text3); }
+.config-label { font-size: 13px; font-weight: 600; letter-spacing: -0.1px; margin-bottom: 2px; }
+.config-sub   { font-size: 11px; color: var(--text3); }
 
 .config-input {
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: var(--r-sm);
-  padding: 9px 12px;
+  padding: 10px 12px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   width: 190px;
   transition: border-color 0.12s;
 }
@@ -1557,7 +1557,7 @@ input:-webkit-autofill:focus {
 .dash-hero-left { display: flex; flex-direction: column; gap: 6px; position: relative; z-index: 1; }
 
 .dash-greeting {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -1.1px;
   color: var(--text);
@@ -1643,7 +1643,7 @@ input:-webkit-autofill:focus {
 }
 
 .kpi-v2-value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -1.2px;
@@ -1812,7 +1812,7 @@ input:-webkit-autofill:focus {
 }
 
 .urg-name {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.2px;
   white-space: nowrap;
@@ -1822,7 +1822,7 @@ input:-webkit-autofill:focus {
 }
 
 .urg-info {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text2);
   margin-top: 2px;
   white-space: nowrap;
@@ -2033,12 +2033,28 @@ input:-webkit-autofill:focus {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  align-items: stretch; /* garante que ambas as colunas tenham a mesma altura */
 }
 
 .gestor-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
+  align-items: stretch;
+}
+
+/* Cards dentro dos grids do gestor sempre preenchem a altura da linha */
+.gestor-grid-2 > .dash-meta,
+.gestor-grid-3 > .dash-meta {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Conteúdo do card cresce para preencher o espaço disponível */
+.gestor-grid-2 > .dash-meta > *:last-child,
+.gestor-grid-3 > .dash-meta > *:last-child {
+  flex: 1;
 }
 
 /* ── Responsive ── */
@@ -2069,7 +2085,8 @@ input:-webkit-autofill:focus {
 
   /* ── Topbar: shift right to make room for hamburger ── */
   .topbar { padding: 0 12px 0 58px; gap: 8px; }
-  .page-title { font-size: 13px; }
+  .page-title { font-size: 15px; }
+  .page-sub   { font-size: 10px; }
 
   /* ── KPI Grids ── */
   .kpi-grid     { grid-template-columns: 1fr 1fr; }
@@ -2077,7 +2094,9 @@ input:-webkit-autofill:focus {
 
   /* KPI V2: 2 colunas no mobile */
   .kpi-v2-grid  { grid-template-columns: repeat(2, 1fr); }
-  .kpi-v2-value { font-size: 22px; }
+  .kpi-v2-value { font-size: 24px; }
+  .kpi-v2-sub   { font-size: 11px; }
+  .kpi-v2-label { font-size: 9px; }
 
   /* ── Atividade recente: 1 coluna no mobile ── */
   .atv-list { grid-template-columns: 1fr; }
@@ -2091,8 +2110,9 @@ input:-webkit-autofill:focus {
   .stat-item               { padding: 14px 16px; }
 
   /* ── Hero ── */
-  .dash-greeting { font-size: 17px; }
-  .dash-hero     { padding: 16px 18px; }
+  .dash-greeting     { font-size: 18px; }
+  .dash-greeting-sub { font-size: 12px; }
+  .dash-hero         { padding: 16px 18px; }
 
   /* ── Botão Novo Lead — só ícone no mobile ── */
   .add-btn { padding: 7px 9px; gap: 0; }

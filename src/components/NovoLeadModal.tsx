@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { hoje, agora } from '@/lib/utils';
+// hoje/agora não são mais necessários — data/hora derivam de created_at no banco
 import { SEGMENTOS, ORIGENS } from '@/types';
 
 const INTERESSES = [
@@ -44,8 +44,6 @@ export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
         valor:       form.valor ? Number(form.valor) : null,
         obs:         form.obs.trim() || null,
         status:      'novo',
-        data:        hoje(),
-        hora:        agora(),
         followup:    null,
         score:       null,
         motivo_perda: null,

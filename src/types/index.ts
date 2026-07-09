@@ -27,8 +27,8 @@ export interface Lead {
   status: LeadStatus;
   int: string | null;
   valor: number | null;
-  data: string;
-  hora: string;
+  data?: string;   // DD/MM — pode não existir no banco; use leadData() para exibir
+  hora?: string;   // HH:MM — pode não existir no banco; use leadHora() para exibir
   obs: string | null;
   followup: string | null;
   score: number | null;

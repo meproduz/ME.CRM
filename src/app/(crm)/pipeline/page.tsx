@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, fmtData } from '@/lib/utils';
+import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora } from '@/lib/utils';
 import { KANBAN_COLS, VAL, ORIG_COLORS, type Lead, type LeadStatus } from '@/types';
 import LeadPanel from '@/components/LeadPanel';
 import NovoLeadModal from '@/components/NovoLeadModal';
@@ -197,13 +197,14 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
   lead: Lead; isDragging: boolean;
   onDragStart: (e: React.DragEvent) => void; onClick: () => void;
 }) {
-  const stale = isStale(lead.hist, lead.data, lead.status);
+  const ld = leadData(lead);
+  const stale = isStale(lead.hist, ld, lead.status);
   const valor = getLeadValor(lead);
   const origColor = ORIG_COLORS[lead.orig ?? ''] ?? '#555';
   const isClosed = lead.status === 'fechado';
   const fuNow = lead.followup && new Date(lead.followup + 'T00:00:00') <= new Date();
   const fuOk = lead.followup && !fuNow;
-  const diasP = stale ? diasAtras(ultimoContato(lead.hist, lead.data)) : 0;
+  const diasP = stale ? diasAtras(ultimoContato(lead.hist, ld)) : 0;
 
   return (
     <motion.div
@@ -216,7 +217,7 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
     >
       <div className="card-name">{lead.nome}</div>
       <div className="card-seg">{lead.seg || 'Não definido'}</div>
-      <div className="card-time">{lead.data}<span> {lead.hora}</span></div>
+      <div className="card-time">{ld}<span> {leadHora(lead)}</span></div>
 
       {stale && (
         <div className="stale-badge">

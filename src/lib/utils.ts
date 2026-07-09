@@ -88,3 +88,19 @@ export function fuStatus(followup: string | null): { text: string; color: string
 export function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+/** Retorna a data de entrada do lead em formato DD/MM.
+ *  Usa o campo `data` do banco se existir; caso contrário deriva de `created_at`. */
+export function leadData(l: { data?: string; created_at?: string }): string {
+  if (l.data) return l.data;
+  if (!l.created_at) return '—';
+  return new Date(l.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+/** Retorna a hora de entrada do lead em formato HH:MM.
+ *  Usa o campo `hora` do banco se existir; caso contrário deriva de `created_at`. */
+export function leadHora(l: { hora?: string; created_at?: string }): string {
+  if (l.hora) return l.hora;
+  if (!l.created_at) return '';
+  return new Date(l.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}

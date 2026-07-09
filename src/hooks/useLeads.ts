@@ -178,7 +178,7 @@ export function useLeads() {
 
   // ─── Criar lead — com validação de todos os campos ───────────────────────
 
-  const createLead = useCallback(async (fields: Omit<Lead, 'id' | 'hist' | 'created_at'>) => {
+  const createLead = useCallback(async (fields: Omit<Lead, 'id' | 'hist' | 'created_at' | 'data' | 'hora'>) => {
     // Valida todos os campos antes de inserir
     for (const [field, value] of Object.entries(fields)) {
       if (field === 'cliente_id' || field === 'data' || field === 'hora') continue; // campos internos, não valida
@@ -253,7 +253,7 @@ export function useLeads() {
     let count = 0;
     for (const row of rows) {
       try {
-        const fields: Omit<Lead, 'id' | 'hist' | 'created_at'> = {
+        const fields: Omit<Lead, 'id' | 'hist' | 'created_at' | 'data' | 'hora'> = {
           cliente_id: state.currentUser.cliente_id,
           nome: row['Nome'] || row['nome'] || '',
           tel: row['Telefone'] || row['telefone'] || null,
@@ -264,8 +264,6 @@ export function useLeads() {
           valor: Number(row['Valor'] || row['valor']) || null,
           obs: row['Observacao'] || row['observacao'] || null,
           status: 'novo',
-          data: hoje(),
-          hora: agora(),
           followup: null,
           score: null,
           motivo_perda: null,

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras } from '@/lib/utils';
+import { fmtR, diasAtras, leadData } from '@/lib/utils';
 import { KANBAN_COLS, ORIGENS, ORIG_COLORS, VAL } from '@/types';
 
 function getLeadValor(l: any) {
@@ -28,8 +28,8 @@ export default function RelatoriosPage() {
     const now = new Date();
     return state.leads.filter((l) => {
       if (periodo === 'total') return true;
-      if (!l.data) return false;
-      const parts = l.data.split('/');
+      const ld = leadData(l);
+      const parts = ld.split('/');
       if (parts.length < 2) return false;
       const d = new Date(now.getFullYear(), Number(parts[1]) - 1, Number(parts[0]));
       if (d > now) d.setFullYear(now.getFullYear() - 1);
@@ -46,7 +46,7 @@ export default function RelatoriosPage() {
     const perdidos = fl.filter((l) => l.status === 'perdido');
     const mrr = fechados.reduce((a, l) => a + getLeadValor(l), 0);
     const conv = fl.length ? Math.round((fechados.length / fl.length) * 100) : 0;
-    const tmMed = fl.length > 0 ? Math.round(fl.reduce((a, l) => a + diasAtras(l.data), 0) / fl.length) : 0;
+    const tmMed = fl.length > 0 ? Math.round(fl.reduce((a, l) => a + diasAtras(leadData(l)), 0) / fl.length) : 0;
     return { fechados, perdidos, mrr, conv, tmMed };
   }, [fl]);
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { fmtR } from '@/lib/utils';
+import { fmtR, leadData, leadHora } from '@/lib/utils';
 import { KANBAN_COLS, VAL } from '@/types';
 
 function getLeadValor(l: any) {
@@ -93,7 +93,7 @@ export default function LeadsPage() {
                     </span>
                   </td>
                   <td style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                    {l.data} {l.hora}
+                    {leadData(l)} {leadHora(l)}
                   </td>
                 </tr>
               );

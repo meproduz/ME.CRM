@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { isStale } from '@/lib/utils';
+import { isStale, leadData } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import Logo from '@/components/Logo';
 
@@ -48,7 +48,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
   const { state } = useCRM();
 
   const urgentes = state.leads.filter(
-    (l) => l.status === 'novo' || isStale(l.hist, l.data, l.status)
+    (l) => l.status === 'novo' || isStale(l.hist, leadData(l), l.status)
   ).length;
 
   const followupsVencidos = state.leads.filter((l) => {

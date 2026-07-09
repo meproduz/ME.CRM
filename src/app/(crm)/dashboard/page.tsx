@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, isStale, fmtData, ultimoContato } from '@/lib/utils';
+import { fmtR, diasAtras, isStale, fmtData, ultimoContato, leadData } from '@/lib/utils';
 import { KANBAN_COLS, ORIGENS, ORIG_COLORS, VAL } from '@/types';
 
 function getLeadValor(l: any) {
@@ -94,8 +94,8 @@ export default function DashboardPage() {
     const pipePct  = metaMensal > 0 ? Math.min(Math.round((pipe / metaMensal) * 100), 100) : 0;
 
     // Leads deste mês vs mês passado
-    const tm = leads.filter(l => { const d = parseLeadDate(l.data); return d ? d.getMonth() === cm && d.getFullYear() === cy : false; });
-    const prevM = leads.filter(l => { const d = parseLeadDate(l.data); return d ? d.getMonth() === pm && d.getFullYear() === py : false; });
+    const tm = leads.filter(l => { const d = parseLeadDate(leadData(l)); return d ? d.getMonth() === cm && d.getFullYear() === cy : false; });
+    const prevM = leads.filter(l => { const d = parseLeadDate(leadData(l)); return d ? d.getMonth() === pm && d.getFullYear() === py : false; });
     const tmF = tm.filter(l => l.status === 'fechado');
     const pmF = prevM.filter(l => l.status === 'fechado');
     const tmMrr = tmF.reduce((a, l) => a + getLeadValor(l), 0);
@@ -119,8 +119,8 @@ export default function DashboardPage() {
   const { novos, parados, fuVenc } = useMemo(() => {
     const novos   = leads.filter((l) => l.status === 'novo');
     const parados = leads
-      .filter((l) => isStale(l.hist, l.data, l.status) && l.status !== 'novo')
-      .sort((a, b) => diasAtras(ultimoContato(b.hist, b.data)) - diasAtras(ultimoContato(a.hist, a.data)));
+      .filter((l) => isStale(l.hist, leadData(l), l.status) && l.status !== 'novo')
+      .sort((a, b) => diasAtras(ultimoContato(b.hist, leadData(b))) - diasAtras(ultimoContato(a.hist, leadData(a))));
     const fuVenc = leads.filter((l) => {
       if (!l.followup || l.status === 'fechado' || l.status === 'perdido') return false;
       return new Date(l.followup + 'T00:00:00') <= new Date();
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                   const isRed = parados.includes(l), isFu = fuVenc.includes(l);
                   const color = isFu ? '#F97316' : isRed ? '#F04747' : '#C9A227';
                   const valor = getLeadValor(l);
-                  const dias  = diasAtras(ultimoContato(l.hist, l.data));
+                  const dias  = diasAtras(ultimoContato(l.hist, leadData(l)));
                   const waMsg = encodeURIComponent(waTemplate.replace('{nome}', l.nome));
                   return (
                     <div key={l.id} className="urg-row" onClick={() => openLead(l.id)}
@@ -415,7 +415,7 @@ export default function DashboardPage() {
                       {valor > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold2)' }}>{fmtR(valor)}</span>}
                       <span className={`sp sp-${l.status}`}>{STATUS_LABEL[l.status]}</span>
                     </div>
-                    <div className="atv-data">{l.data}</div>
+                    <div className="atv-data">{leadData(l)}</div>
                   </div>
                 );
               })}

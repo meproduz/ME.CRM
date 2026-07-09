@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData } from '@/lib/utils';
+import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora } from '@/lib/utils';
 import { KANBAN_COLS, SEGMENTOS, ORIGENS, VAL, type Lead, type LeadStatus } from '@/types';
 
 function getLeadValor(l: any) {
@@ -28,7 +28,8 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const [perdaMotivo, setPerdaMotivo] = useState('');
   const [perdaObs, setPerdaObs] = useState('');
 
-  const stale = isStale(lead.hist, lead.data, lead.status);
+  const ld = leadData(lead);
+  const stale = isStale(lead.hist, ld, lead.status);
   const valor = getLeadValor(lead);
   const score = qualScore(lead);
   const fuSt = fuStatus(lead.followup);
@@ -75,14 +76,14 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
           <div>
             <div className="panel-name">{lead.nome}</div>
             <div className="panel-seg">{lead.seg || 'Não definido'} · {lead.orig || '—'}</div>
-            <div className="panel-arrival">Chegou em {lead.data} às {lead.hora}</div>
+            <div className="panel-arrival">Chegou em {ld} às {leadHora(lead)}</div>
             {stale && (
               <div className="panel-stale" style={{ display: 'inline-flex' }}>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M5 3v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                 </svg>
-                <span>{diasAtras(ultimoContato(lead.hist, lead.data))} dias sem contato</span>
+                <span>{diasAtras(ultimoContato(lead.hist, ld))} dias sem contato</span>
               </div>
             )}
           </div>

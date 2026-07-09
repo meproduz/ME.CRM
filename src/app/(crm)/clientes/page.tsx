@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras } from '@/lib/utils';
+import { fmtR, diasAtras, leadData } from '@/lib/utils';
 import { VAL } from '@/types';
 
 function getLeadValor(l: any) {
@@ -48,7 +48,7 @@ export default function ClientesPage() {
           <div className="clientes-grid">
             {clientes.map((l) => {
               const val = getLeadValor(l);
-              const dias = diasAtras(l.data);
+              const dias = diasAtras(leadData(l));
               const waMsg = encodeURIComponent(
                 ((state.waTemplates as any)[l.status] || state.waTemplate).replace('{nome}', l.nome)
               );

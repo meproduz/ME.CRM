@@ -181,7 +181,7 @@ export function useLeads() {
   const createLead = useCallback(async (fields: Omit<Lead, 'id' | 'hist' | 'created_at'>) => {
     // Valida todos os campos antes de inserir
     for (const [field, value] of Object.entries(fields)) {
-      if (field === 'cliente_id') continue; // campo interno, não valida
+      if (field === 'cliente_id' || field === 'data' || field === 'hora') continue; // campos internos, não valida
       const err = validateField(field, value);
       if (err) {
         logger.warn('leads.create.validation_failed', {

@@ -29,7 +29,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const [perdaObs, setPerdaObs] = useState('');
 
   const ld = leadData(lead);
-  const stale = isStale(lead.hist, ld, lead.status);
+  const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at);
   const valor = getLeadValor(lead);
   const score = qualScore(lead);
   const fuSt = fuStatus(lead.followup);

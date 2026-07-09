@@ -198,7 +198,7 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
   onDragStart: (e: React.DragEvent) => void; onClick: () => void;
 }) {
   const ld = leadData(lead);
-  const stale = isStale(lead.hist, ld, lead.status);
+  const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at);
   const valor = getLeadValor(lead);
   const origColor = ORIG_COLORS[lead.orig ?? ''] ?? '#555';
   const isClosed = lead.status === 'fechado';

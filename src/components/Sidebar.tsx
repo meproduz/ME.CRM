@@ -48,7 +48,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
   const { state } = useCRM();
 
   const urgentes = state.leads.filter(
-    (l) => l.status === 'novo' || isStale(l.hist, leadData(l), l.status)
+    (l) => l.status === 'novo' || isStale(l.hist, leadData(l), l.status, l.status_changed_at)
   ).length;
 
   const followupsVencidos = state.leads.filter((l) => {

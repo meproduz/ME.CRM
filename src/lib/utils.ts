@@ -45,10 +45,36 @@ export function ultimoContato(hist: string[], dataEntrada: string): string {
   return dataEntrada;
 }
 
-/** Lead parado sem contato? */
-export function isStale(hist: string[], dataEntrada: string, status: string): boolean {
+/** Dias sem contato tolerados por etapa */
+const STALE_THRESHOLD: Record<string, number> = {
+  novo:       1,   // novo lead deve ser contactado em 1 dia
+  contato:    3,   // em contato: 3 dias
+  proposta:   5,   // proposta enviada pode aguardar 5 dias
+  negociacao: 7,   // negociação pode levar mais tempo
+};
+
+/** Lead parado sem contato?
+ *  Aceita status_changed_at como proxy de atividade recente quando o
+ *  histórico ainda não foi carregado (hist = []). */
+export function isStale(
+  hist: string[],
+  dataEntrada: string,
+  status: string,
+  statusChangedAt?: string | null,
+): boolean {
   if (status === 'fechado' || status === 'perdido') return false;
-  return diasAtras(ultimoContato(hist, dataEntrada)) > 3;
+  const threshold = STALE_THRESHOLD[status] ?? 3;
+
+  // Quando o histórico não foi carregado ainda, usa status_changed_at
+  // como proxy: se o status mudou recentemente, não é parado
+  if (hist.length === 0 && statusChangedAt) {
+    const daysSinceChange = Math.floor(
+      (Date.now() - new Date(statusChangedAt).getTime()) / 86400000
+    );
+    if (daysSinceChange <= threshold) return false;
+  }
+
+  return diasAtras(ultimoContato(hist, dataEntrada)) > threshold;
 }
 
 /** Score de qualificação 0-5 */

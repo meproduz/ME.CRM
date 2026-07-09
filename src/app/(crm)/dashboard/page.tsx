@@ -119,7 +119,7 @@ export default function DashboardPage() {
   const { novos, parados, fuVenc } = useMemo(() => {
     const novos   = leads.filter((l) => l.status === 'novo');
     const parados = leads
-      .filter((l) => isStale(l.hist, leadData(l), l.status) && l.status !== 'novo')
+      .filter((l) => isStale(l.hist, leadData(l), l.status, l.status_changed_at) && l.status !== 'novo')
       .sort((a, b) => diasAtras(ultimoContato(b.hist, leadData(b))) - diasAtras(ultimoContato(a.hist, leadData(a))));
     const fuVenc = leads.filter((l) => {
       if (!l.followup || l.status === 'fechado' || l.status === 'perdido') return false;

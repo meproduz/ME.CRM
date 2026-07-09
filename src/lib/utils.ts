@@ -34,13 +34,19 @@ export function diasAtras(data: string): number {
   } catch { return 0; }
 }
 
-/** Último contato registrado no histórico */
-export function ultimoContato(hist: string[], dataEntrada: string): string {
+/** Último contato registrado no histórico.
+ *  Se hist ainda não foi carregado (vazio), usa lastContact (pré-carregado no load inicial). */
+export function ultimoContato(hist: string[], dataEntrada: string, lastContact?: string): string {
   if (hist && hist.length > 0) {
     for (let i = hist.length - 1; i >= 0; i--) {
       const m = hist[i].match(/(\d{2}\/\d{2})/);
       if (m) return m[1];
     }
+  }
+  // Usa último entry pré-carregado quando hist ainda não foi populado
+  if (lastContact) {
+    const m = lastContact.match(/(\d{2}\/\d{2})/);
+    if (m) return m[1];
   }
   return dataEntrada;
 }
@@ -54,27 +60,27 @@ const STALE_THRESHOLD: Record<string, number> = {
 };
 
 /** Lead parado sem contato?
- *  Aceita status_changed_at como proxy de atividade recente quando o
- *  histórico ainda não foi carregado (hist = []). */
+ *  Usa lastContact (pré-carregado no load inicial) para precisão sem precisar
+ *  abrir o lead. statusChangedAt é fallback quando não há nenhum histórico. */
 export function isStale(
   hist: string[],
   dataEntrada: string,
   status: string,
   statusChangedAt?: string | null,
+  lastContact?: string,
 ): boolean {
   if (status === 'fechado' || status === 'perdido') return false;
   const threshold = STALE_THRESHOLD[status] ?? 3;
 
-  // Quando o histórico não foi carregado ainda, usa status_changed_at
-  // como proxy: se o status mudou recentemente, não é parado
-  if (hist.length === 0 && statusChangedAt) {
-    const daysSinceChange = Math.floor(
+  // Quando não há histórico nem lastContact, usa status_changed_at como proxy
+  if (hist.length === 0 && !lastContact && statusChangedAt) {
+    const daysSince = Math.floor(
       (Date.now() - new Date(statusChangedAt).getTime()) / 86400000
     );
-    if (daysSinceChange <= threshold) return false;
+    if (daysSince <= threshold) return false;
   }
 
-  return diasAtras(ultimoContato(hist, dataEntrada)) > threshold;
+  return diasAtras(ultimoContato(hist, dataEntrada, lastContact)) > threshold;
 }
 
 /** Score de qualificação 0-5 */

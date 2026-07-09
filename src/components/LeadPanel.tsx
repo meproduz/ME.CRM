@@ -29,7 +29,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const [perdaObs, setPerdaObs] = useState('');
 
   const ld = leadData(lead);
-  const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at);
+  const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
   const valor = getLeadValor(lead);
   const score = qualScore(lead);
   const fuSt = fuStatus(lead.followup);
@@ -83,7 +83,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                   <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M5 3v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                 </svg>
-                <span>{diasAtras(ultimoContato(lead.hist, ld))} dias sem contato</span>
+                <span>{diasAtras(ultimoContato(lead.hist, ld, lead.lastContact))} dias sem contato</span>
               </div>
             )}
           </div>

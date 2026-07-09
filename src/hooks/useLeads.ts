@@ -70,9 +70,31 @@ export function useLeads() {
           .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
       ) as { data: Record<string, unknown>[] | null; error: unknown; count: number | null };
       if (error) throw error;
-      const leads: Lead[] = (data ?? []).map((l) => ({
+      let leads: Lead[] = (data ?? []).map((l) => ({
         ...(l as unknown as Lead), hist: [], followup: (l.followup as string | null) ?? null
       }));
+
+      // Pré-carrega o último histórico de cada lead para stale detection precisa
+      // sem precisar abrir cada lead individualmente
+      if (leads.length > 0) {
+        const ids = leads.map((l) => l.id);
+        const { data: histData } = await dbQuery(
+          { operation: 'select', table: 'leads_historico', userId: state.currentUser.id, clienteId: cid },
+          () => supabase
+            .from('leads_historico')
+            .select('lead_id, descricao')
+            .in('lead_id', ids)
+            .order('created_at', { ascending: false })
+        ) as { data: { lead_id: string; descricao: string }[] | null };
+        if (histData) {
+          const latestPerLead: Record<string, string> = {};
+          for (const h of histData) {
+            if (!latestPerLead[h.lead_id]) latestPerLead[h.lead_id] = h.descricao;
+          }
+          leads = leads.map((l) => ({ ...l, lastContact: latestPerLead[l.id] }));
+        }
+      }
+
       if (reset) dispatch({ type: 'SET_LEADS', payload: leads });
       else dispatch({ type: 'APPEND_LEADS', payload: leads });
       dispatch({ type: 'SET_PAGINATION', payload: { page: page + 1, hasMore: (data?.length ?? 0) === PAGE_SIZE, totalCount: count ?? 0 } });

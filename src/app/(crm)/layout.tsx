@@ -54,7 +54,24 @@ function CRMInner({ children }: { children: React.ReactNode }) {
         .range(0, 49);
 
       if (leads) {
-        dispatch({ type: 'SET_LEADS', payload: leads.map((l) => ({ ...l, hist: [] })) });
+        // Pré-carrega o último histórico de cada lead para stale detection
+        // precisa desde o carregamento inicial — sem precisar abrir cada lead
+        let latestPerLead: Record<string, string> = {};
+        if (leads.length > 0) {
+          const ids = leads.map((l: { id: string }) => l.id);
+          const { data: histData } = await supabase
+            .from('leads_historico')
+            .select('lead_id, descricao')
+            .in('lead_id', ids)
+            .order('created_at', { ascending: false });
+          if (histData) {
+            for (const h of histData as { lead_id: string; descricao: string }[]) {
+              if (!latestPerLead[h.lead_id]) latestPerLead[h.lead_id] = h.descricao;
+            }
+          }
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        dispatch({ type: 'SET_LEADS', payload: leads.map((l: any) => ({ ...l, hist: [], lastContact: latestPerLead[l.id] })) });
         dispatch({ type: 'SET_PAGINATION', payload: { page: 1, hasMore: leads.length === 50, totalCount: count ?? 0 } });
       }
 

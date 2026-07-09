@@ -119,8 +119,8 @@ export default function DashboardPage() {
   const { novos, parados, fuVenc } = useMemo(() => {
     const novos   = leads.filter((l) => l.status === 'novo');
     const parados = leads
-      .filter((l) => isStale(l.hist, leadData(l), l.status, l.status_changed_at) && l.status !== 'novo')
-      .sort((a, b) => diasAtras(ultimoContato(b.hist, leadData(b))) - diasAtras(ultimoContato(a.hist, leadData(a))));
+      .filter((l) => isStale(l.hist, leadData(l), l.status, l.status_changed_at, l.lastContact) && l.status !== 'novo')
+      .sort((a, b) => diasAtras(ultimoContato(b.hist, leadData(b), b.lastContact)) - diasAtras(ultimoContato(a.hist, leadData(a), a.lastContact)));
     const fuVenc = leads.filter((l) => {
       if (!l.followup || l.status === 'fechado' || l.status === 'perdido') return false;
       return new Date(l.followup + 'T00:00:00') <= new Date();
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                   const isRed = parados.includes(l), isFu = fuVenc.includes(l);
                   const color = isFu ? '#F97316' : isRed ? '#F04747' : '#C9A227';
                   const valor = getLeadValor(l);
-                  const dias  = diasAtras(ultimoContato(l.hist, leadData(l)));
+                  const dias  = diasAtras(ultimoContato(l.hist, leadData(l), l.lastContact));
                   const waMsg = encodeURIComponent(waTemplate.replace('{nome}', l.nome));
                   return (
                     <div key={l.id} className="urg-row" onClick={() => openLead(l.id)}

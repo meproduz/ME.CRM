@@ -35,8 +35,9 @@ export interface Lead {
   motivo_perda: string | null;
   created_at: string;
   status_changed_at?: string | null;
-  // Virtual
+  // Virtual (não vem do banco diretamente)
   hist: string[];
+  lastContact?: string; // último entry do historico — pré-carregado para stale detection sem abrir o lead
 }
 
 export interface LeadHistorico {

@@ -111,7 +111,9 @@ function reducer(state: CRMState, action: Action): CRMState {
       return {
         ...state,
         leads: state.leads.map((l) =>
-          l.id === action.payload.leadId ? { ...l, hist: [...l.hist, action.payload.entry] } : l
+          l.id === action.payload.leadId
+            ? { ...l, hist: [...l.hist, action.payload.entry], lastContact: action.payload.entry }
+            : l
         ),
       };
     default: return state;

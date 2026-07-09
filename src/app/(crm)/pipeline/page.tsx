@@ -198,13 +198,13 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
   onDragStart: (e: React.DragEvent) => void; onClick: () => void;
 }) {
   const ld = leadData(lead);
-  const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at);
+  const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
   const valor = getLeadValor(lead);
   const origColor = ORIG_COLORS[lead.orig ?? ''] ?? '#555';
   const isClosed = lead.status === 'fechado';
   const fuNow = lead.followup && new Date(lead.followup + 'T00:00:00') <= new Date();
   const fuOk = lead.followup && !fuNow;
-  const diasP = stale ? diasAtras(ultimoContato(lead.hist, ld)) : 0;
+  const diasP = stale ? diasAtras(ultimoContato(lead.hist, ld, lead.lastContact)) : 0;
 
   return (
     <motion.div

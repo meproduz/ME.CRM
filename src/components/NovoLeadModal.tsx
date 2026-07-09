@@ -53,10 +53,13 @@ export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
       onClose();
     } catch (err: unknown) {
       console.error('[NovoLead] erro ao salvar:', err);
-      let msg = 'Erro ao salvar. Tente novamente.';
-      if (err instanceof Error) msg = err.message;
-      else if (err && typeof err === 'object' && 'message' in err) msg = String((err as {message: unknown}).message);
-      else if (typeof err === 'string') msg = err;
+      // Extrai mensagem legível de qualquer tipo de erro (Error, PostgrestError, string, etc.)
+      let msg = 'Erro desconhecido';
+      try {
+        if (typeof err === 'string') msg = err;
+        else if (err instanceof Error) msg = err.message;
+        else msg = JSON.stringify(err);
+      } catch { msg = String(err); }
       setErro(msg);
     } finally {
       setSaving(false);

@@ -5,9 +5,12 @@ import { VAL } from '@/types';
 
 export function fmtR(v: number | null | undefined): string {
   if (v == null) return '—';
-  // Arredonda para inteiro e formata manualmente com ponto como separador de milhar
-  const n = Math.round(Number(v));
-  return 'R$ ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Converte para centavos (inteiro) para evitar problemas de ponto flutuante
+  const rounded = Math.round(Number(v) * 100);
+  const cents = rounded % 100;
+  const intPart = Math.floor(rounded / 100);
+  const intFormatted = intPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return 'R$ ' + intFormatted + ',' + Math.abs(cents).toString().padStart(2, '0');
 }
 
 export function hoje(): string {

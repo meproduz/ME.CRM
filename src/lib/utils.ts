@@ -4,7 +4,9 @@ import type { Lead } from '@/types';
 
 export function fmtR(v: number | null | undefined): string {
   if (v == null) return '—';
-  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
+  // Arredonda para inteiro e formata manualmente com ponto como separador de milhar
+  const n = Math.round(Number(v));
+  return 'R$ ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 export function hoje(): string {

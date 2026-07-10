@@ -3,17 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, leadData } from '@/lib/utils';
+import { fmtR, diasAtras, leadData, getLeadValor } from '@/lib/utils';
 import { VAL } from '@/types';
-
-function getLeadValor(l: any) {
-  if (l.valor) return Number(l.valor);
-  if (l.int) {
-    const key = Object.keys(VAL).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
-    if (key) return VAL[key];
-  }
-  return 0;
-}
 
 export default function ClientesPage() {
   const { state, dispatch } = useCRM();

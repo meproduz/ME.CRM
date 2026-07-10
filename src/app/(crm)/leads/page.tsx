@@ -3,17 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, leadData, leadHora } from '@/lib/utils';
+import { fmtR, leadData, leadHora, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, VAL } from '@/types';
-
-function getLeadValor(l: any) {
-  if (l.valor) return Number(l.valor);
-  if (l.int) {
-    const key = Object.keys(VAL).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
-    if (key) return VAL[key];
-  }
-  return 0;
-}
 
 const STATUS_CLASS: Record<string, string> = {
   novo: 'sp-novo', contato: 'sp-contato', proposta: 'sp-proposta',

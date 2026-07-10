@@ -3,17 +3,8 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, isStale, fmtData, ultimoContato, leadData } from '@/lib/utils';
+import { fmtR, diasAtras, isStale, fmtData, ultimoContato, leadData, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, ORIGENS, ORIG_COLORS, VAL } from '@/types';
-
-function getLeadValor(l: any) {
-  if (l.valor) return Number(l.valor);
-  if (l.int) {
-    const key = Object.keys(VAL).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
-    if (key) return VAL[key];
-  }
-  return 0;
-}
 
 function parseLeadDate(data: string): Date | null {
   if (!data) return null;

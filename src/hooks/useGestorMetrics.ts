@@ -23,14 +23,8 @@ export const COR_ETAPA: Record<string, string> = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-export function getLeadValor(l: Lead): number {
-  if (l.valor && Number(l.valor) > 0) return Number(l.valor);
-  if (l.int) {
-    const key = Object.keys(VAL).find(k => l.int?.toLowerCase().includes(k.toLowerCase()));
-    if (key) return VAL[key];
-  }
-  return 0;
-}
+import { getLeadValor } from '@/lib/utils';
+export { getLeadValor } from '@/lib/utils';
 
 function mesAno(date: Date): string {
   return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });

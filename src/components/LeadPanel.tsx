@@ -4,17 +4,8 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora } from '@/lib/utils';
+import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, SEGMENTOS, ORIGENS, VAL, type Lead, type LeadStatus } from '@/types';
-
-function getLeadValor(l: any) {
-  if (l.valor) return Number(l.valor);
-  if (l.int) {
-    const key = Object.keys(VAL).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
-    if (key) return VAL[key];
-  }
-  return 0;
-}
 
 const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700'];
 
@@ -133,7 +124,11 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
             </div>
             <div className="pf">
               <div className="pf-label">Valor do orçamento (R$)</div>
-              <input type="number" defaultValue={lead.valor ?? ''} onBlur={(e) => updateField(lead.id, 'valor', Number(e.target.value) || null)} />
+              <input type="number" defaultValue={lead.valor != null && Number(lead.valor) < 100 ? Math.round(Number(lead.valor) * 1000) : (lead.valor ?? '')} onBlur={(e) => {
+                // Remove pontos usados como separador de milhar antes de salvar
+                const raw = e.target.value.replace(/\./g, '').replace(',', '.');
+                updateField(lead.id, 'valor', Number(raw) || null);
+              }} />
             </div>
           </div>
 

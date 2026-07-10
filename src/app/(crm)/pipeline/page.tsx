@@ -4,19 +4,10 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora } from '@/lib/utils';
+import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, VAL, ORIG_COLORS, type Lead, type LeadStatus } from '@/types';
 import LeadPanel from '@/components/LeadPanel';
 import NovoLeadModal from '@/components/NovoLeadModal';
-
-function getLeadValor(l: any) {
-  if (l.valor) return Number(l.valor);
-  if (l.int) {
-    const key = Object.keys(VAL).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
-    if (key) return VAL[key];
-  }
-  return 0;
-}
 
 export default function PipelinePage() {
   const { state, dispatch, getFilteredLeads } = useCRM();

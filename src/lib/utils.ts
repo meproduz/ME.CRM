@@ -1,6 +1,7 @@
 // ─── Utilitários do Mp. CRM ───────────────────────────────────────────────────
 
 import type { Lead } from '@/types';
+import { VAL } from '@/types';
 
 export function fmtR(v: number | null | undefined): string {
   if (v == null) return '—';
@@ -96,11 +97,17 @@ export function qualScore(l: Partial<Lead>): number {
   return s;
 }
 
-/** Valor do lead (explícito ou pelo interesse) */
-export function getLeadValor(l: Partial<Lead>, val: Record<string, number> = {}): number {
-  if (l.valor) return l.valor;
+/** Valor do lead (explícito ou pelo interesse)
+ *  Corrige valores salvos com ponto como separador de milhar (ex: 1.799 → 1799)
+ *  Produtos da Me Produz. custam R$700+, então v < 100 indica erro de input pt-BR */
+export function getLeadValor(l: Partial<Lead>, val: Record<string, number> = VAL): number {
+  if (l.valor != null) {
+    const v = Number(l.valor);
+    if (!isNaN(v) && v > 0) {
+      return v < 100 ? Math.round(v * 1000) : v;
+    }
+  }
   if (l.int) {
-    // tenta pelo nome do produto
     const key = Object.keys(val).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
     if (key) return val[key];
   }

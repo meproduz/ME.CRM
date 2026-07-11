@@ -135,8 +135,11 @@ export function useLeads() {
 
   const addNota = useCallback(async (leadId: string, texto: string) => {
     const entry = `📝 ${hoje()} ${agora()} — ${texto}`;
+    const now = new Date().toISOString();
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
-    dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
+    // Persiste status_changed_at no banco para que isStale funcione corretamente após refresh
+    await supabase.from('leads').update({ status_changed_at: now }).eq('id', leadId);
+    dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry, statusChangedAt: now } });
   }, [dispatch]);
 
   // ─── Mover lead ───────────────────────────────────────────────────────────

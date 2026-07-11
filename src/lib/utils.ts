@@ -66,8 +66,9 @@ const STALE_THRESHOLD: Record<string, number> = {
 };
 
 /** Lead parado sem contato?
- *  Usa lastContact (pré-carregado no load inicial) para precisão sem precisar
- *  abrir o lead. statusChangedAt é fallback quando não há nenhum histórico. */
+ *  status_changed_at é atualizado tanto em movimentações de etapa quanto ao
+ *  adicionar notas — funciona como "última atividade" e é a fonte primária.
+ *  ultimoContato serve como fallback para leads antigos ou sem status_changed_at. */
 export function isStale(
   hist: string[],
   dataEntrada: string,
@@ -78,14 +79,15 @@ export function isStale(
   if (status === 'fechado' || status === 'perdido') return false;
   const threshold = STALE_THRESHOLD[status] ?? 3;
 
-  // Quando não há histórico nem lastContact, usa status_changed_at como proxy
-  if (hist.length === 0 && !lastContact && statusChangedAt) {
-    const daysSince = Math.floor(
+  // Verificação primária: status_changed_at cobre movimentações + notas adicionadas
+  if (statusChangedAt) {
+    const daysSinceActivity = Math.floor(
       (Date.now() - new Date(statusChangedAt).getTime()) / 86400000
     );
-    if (daysSince <= threshold) return false;
+    if (daysSinceActivity <= threshold) return false;
   }
 
+  // Fallback: data do último contato extraída do histórico ou lastContact pré-carregado
   return diasAtras(ultimoContato(hist, dataEntrada, lastContact)) > threshold;
 }
 

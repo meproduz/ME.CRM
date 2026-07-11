@@ -28,11 +28,6 @@ export default function PipelinePage() {
   const segs = ['Todos', ...Array.from(new Set(state.leads.map((l) => l.seg).filter(Boolean) as string[]))];
   const activeLead = state.leads.find((l) => l.id === state.activeLeadId) ?? null;
 
-  // Leads parados ordenados do mais crítico para o menos crítico
-  const staleLeads = state.leads
-    .filter((l) => isStale(l.hist, leadData(l), l.status, l.status_changed_at, l.lastContact))
-    .map((l) => ({ lead: l, dias: diasAtras(ultimoContato(l.hist, leadData(l), l.lastContact)) }))
-    .sort((a, b) => b.dias - a.dias);
 
   function handleDragStart(e: React.DragEvent, id: string) {
     setDragId(id);
@@ -92,51 +87,6 @@ export default function PipelinePage() {
           ))}
         </div>
       </div>
-
-      {/* Alerta: leads parados */}
-      {staleLeads.length > 0 && (
-        <div style={{
-          padding: '7px 28px',
-          background: 'rgba(240,71,71,0.05)',
-          borderBottom: '1px solid rgba(240,71,71,0.14)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexWrap: 'wrap',
-          flexShrink: 0,
-        }}>
-          {/* Ícone + contagem */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%', background: 'var(--red)',
-              display: 'inline-block', animation: 'blink 1.2s ease-in-out infinite',
-            }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', letterSpacing: '-0.1px' }}>
-              {staleLeads.length} lead{staleLeads.length > 1 ? 's' : ''} parado{staleLeads.length > 1 ? 's' : ''}
-            </span>
-            <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 2 }}>— adicione uma nota para resolver</span>
-          </div>
-          {/* Chips clicáveis por lead */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {staleLeads.map(({ lead: l, dias }) => (
-              <button key={l.id}
-                onClick={() => dispatch({ type: 'SET_ACTIVE_LEAD', payload: l.id })}
-                style={{
-                  fontSize: 10, fontWeight: 600,
-                  color: dias >= 5 ? '#ff3b3b' : 'var(--red)',
-                  background: dias >= 5 ? 'rgba(240,71,71,0.14)' : 'rgba(240,71,71,0.07)',
-                  border: '1px solid rgba(240,71,71,0.22)',
-                  borderRadius: 5, padding: '2px 9px',
-                  cursor: 'pointer', transition: 'background 0.15s',
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                }}>
-                {l.nome}
-                <span style={{ opacity: 0.65, fontWeight: 500 }}>{dias}d</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Board */}
       <div className="board-outer" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', padding: '16px 28px' }}>

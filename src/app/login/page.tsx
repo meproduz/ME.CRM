@@ -21,7 +21,18 @@ export default function LoginPage() {
     setErro('');
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
-    if (error) { setErro('E-mail ou senha incorretos.'); setLoading(false); return; }
+    if (error) {
+      // Distingue falha de credenciais de falha de conexão/banco
+      const isCredentialError = error.message?.toLowerCase().includes('invalid') ||
+        error.message?.toLowerCase().includes('credentials') ||
+        error.message?.toLowerCase().includes('password') ||
+        error.status === 400;
+      setErro(isCredentialError
+        ? 'E-mail ou senha incorretos.'
+        : 'Serviço temporariamente indisponível. Tente novamente em instantes.');
+      setLoading(false);
+      return;
+    }
     router.push('/dashboard');
   }
 

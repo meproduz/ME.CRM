@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, VAL, type Lead, type LeadStatus } from '@/types';
+import { exportLeadPDF, exportLeadCSV } from '@/lib/exportLead';
 
 const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700'];
 
@@ -18,6 +19,8 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [perdaMotivo, setPerdaMotivo] = useState('');
   const [perdaObs, setPerdaObs] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const ld = leadData(lead);
   const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
@@ -31,6 +34,18 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
 
   useEffect(() => { loadHist(lead.id); }, [lead.id]);
   useEffect(() => { setFuDate(lead.followup ?? ''); }, [lead.followup]);
+
+  // Fecha dropdown de exportação ao clicar fora
+  useEffect(() => {
+    if (!exportOpen) return;
+    function close(e: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [exportOpen]);
 
   async function handleSaveNota() {
     if (!nota.trim()) return;
@@ -202,6 +217,91 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
               WhatsApp
             </button>
           )}
+
+          {/* Exportar — dropdown PDF / CSV */}
+          <div ref={exportRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setExportOpen((o) => !o)}
+              style={{
+                padding: '8px 13px',
+                background: exportOpen ? 'rgba(201,162,39,0.15)' : 'rgba(201,162,39,0.08)',
+                border: '1px solid rgba(201,162,39,0.3)',
+                borderRadius: 8,
+                color: '#C9A227',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'Inter, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'background 0.15s',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1v6.5M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+              Exportar
+            </button>
+
+            {exportOpen && (
+              <div style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 8px)',
+                left: 0,
+                background: '#16161f',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 10,
+                padding: 5,
+                minWidth: 150,
+                boxShadow: '0 -8px 32px rgba(0,0,0,0.55)',
+                zIndex: 60,
+              }}>
+                {/* PDF */}
+                <button
+                  onClick={() => { exportLeadPDF(lead); setExportOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9,
+                    width: '100%', padding: '9px 12px',
+                    background: 'none', border: 'none', borderRadius: 7,
+                    color: '#EFEFEF', fontSize: 12, fontWeight: 500,
+                    cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="#E8BB3A" strokeWidth="1.2"/>
+                    <path d="M4.5 5h5M4.5 7.5h5M4.5 10h3" stroke="#E8BB3A" strokeWidth="1.1" strokeLinecap="round"/>
+                  </svg>
+                  <span>PDF visual</span>
+                </button>
+                {/* Divider */}
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '3px 8px' }} />
+                {/* CSV */}
+                <button
+                  onClick={() => { exportLeadCSV(lead); setExportOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9,
+                    width: '100%', padding: '9px 12px',
+                    background: 'none', border: 'none', borderRadius: 7,
+                    color: '#EFEFEF', fontSize: 12, fontWeight: 500,
+                    cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="#22C55E" strokeWidth="1.2"/>
+                    <path d="M4 4h6M4 6.5h6M4 9h6M4 11.5h4" stroke="#22C55E" strokeWidth="1" strokeLinecap="round"/>
+                  </svg>
+                  <span>CSV / planilha</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button className="p-sbtn" onClick={onClose}>Fechar</button>
           <button className="p-dbtn" onClick={handleDelete}>Remover</button>
         </div>

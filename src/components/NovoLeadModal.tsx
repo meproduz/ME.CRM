@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 // hoje/agora não são mais necessários — data/hora derivam de created_at no banco
-import { SEGMENTOS, ORIGENS } from '@/types';
+import { SEGMENTOS, ORIGENS_GROUPS } from '@/types';
 
 const INTERESSES = [
   'Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700',
@@ -17,7 +17,7 @@ export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [form, setForm] = useState({
-    nome: '', tel: '', seg: '', orig: 'Instagram', int: '', valor: '', obs: '',
+    nome: '', tel: '', seg: '', orig: 'Instagram Ads', int: '', valor: '', obs: '',
   });
 
   function set(k: string, v: string) { setForm((f) => ({ ...f, [k]: v })); }
@@ -102,7 +102,11 @@ export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
         <div className="mf">
           <label>Origem</label>
           <select value={form.orig} onChange={(e) => set('orig', e.target.value)}>
-            {ORIGENS.map((o) => <option key={o}>{o}</option>)}
+            {ORIGENS_GROUPS.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.items.map((o) => <option key={o} value={o}>{o}</option>)}
+              </optgroup>
+            ))}
           </select>
         </div>
         <div className="mf">

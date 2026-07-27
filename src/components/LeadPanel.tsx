@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
-import { KANBAN_COLS, SEGMENTOS, ORIGENS, VAL, type Lead, type LeadStatus } from '@/types';
+import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, VAL, type Lead, type LeadStatus } from '@/types';
 
 const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700'];
 
@@ -119,7 +119,11 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
               <div className="pf-label">Origem</div>
               <select defaultValue={lead.orig ?? ''} onChange={(e) => updateField(lead.id, 'orig', e.target.value)}>
                 <option value="">Selecione</option>
-                {ORIGENS.map((o) => <option key={o}>{o}</option>)}
+                {ORIGENS_GROUPS.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.items.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </div>
             <div className="pf">

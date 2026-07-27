@@ -9,11 +9,17 @@ export type LeadStatus =
   | 'perdido';
 
 export type LeadOrigem =
-  | 'Instagram'
-  | 'Facebook'
-  | 'Indicacao'
-  | 'WhatsApp direto'
+  | 'Instagram Ads'
+  | 'Facebook Ads'
+  | 'Google Ads'
+  | 'WhatsApp Ads'
+  | 'Instagram Orgânico'
+  | 'Facebook Orgânico'
+  | 'WhatsApp Direto'
+  | 'Indicação'
+  | 'Prospecção Ativa'
   | 'Landing Page'
+  | 'Site / SEO'
   | 'Outro';
 
 export interface Lead {
@@ -98,17 +104,34 @@ export const KANBAN_COLS: KanbanCol[] = [
 
 // ─── Origens e cores ──────────────────────────────────────────────────────────
 
-export const ORIGENS: LeadOrigem[] = [
-  'Instagram', 'Facebook', 'Indicacao', 'WhatsApp direto', 'Landing Page', 'Outro',
+export const ORIGENS_GROUPS: { label: string; items: LeadOrigem[] }[] = [
+  { label: '📣 Tráfego Pago',   items: ['Instagram Ads', 'Facebook Ads', 'Google Ads', 'WhatsApp Ads'] },
+  { label: '🌱 Orgânico',       items: ['Instagram Orgânico', 'Facebook Orgânico', 'WhatsApp Direto'] },
+  { label: '🤝 Relacionamento', items: ['Indicação', 'Prospecção Ativa'] },
+  { label: '📂 Outros',         items: ['Landing Page', 'Site / SEO', 'Outro'] },
 ];
 
+export const ORIGENS: LeadOrigem[] = ORIGENS_GROUPS.flatMap((g) => g.items);
+
 export const ORIG_COLORS: Record<string, string> = {
-  'Instagram':       '#3B82F6',
-  'Facebook':        '#8B5CF6',
-  'Indicacao':       '#22C55E',
-  'WhatsApp direto': '#1D9E75',
-  'Landing Page':    '#C9A227',
-  'Outro':           '#555',
+  // ── Taxonomia atual ──────────────────────────────────────────────────────
+  'Instagram Ads':      '#E1306C',
+  'Facebook Ads':       '#1877F2',
+  'Google Ads':         '#EA4335',
+  'WhatsApp Ads':       '#F97316',
+  'Instagram Orgânico': '#8B5CF6',
+  'Facebook Orgânico':  '#3B82F6',
+  'WhatsApp Direto':    '#1D9E75',
+  'Indicação':          '#22C55E',
+  'Prospecção Ativa':   '#10B981',
+  'Landing Page':       '#C9A227',
+  'Site / SEO':         '#6366F1',
+  'Outro':              '#6B7280',
+  // ── Legados (retrocompatibilidade com leads antigos) ─────────────────────
+  'Instagram':          '#E1306C',
+  'Facebook':           '#1877F2',
+  'Indicacao':          '#22C55E',
+  'WhatsApp direto':    '#1D9E75',
 };
 
 // ─── Segmentos ────────────────────────────────────────────────────────────────

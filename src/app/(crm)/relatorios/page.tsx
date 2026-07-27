@@ -112,11 +112,11 @@ export default function RelatoriosPage() {
             <div className="chart-title">Origens do período</div>
             <div className="chart-sub">canal de entrada</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {ORIGENS.map((o, i) => {
+              {ORIGENS.map((o) => {
                 const n = fl.filter((l) => l.orig === o).length;
                 if (!n) return null;
                 const pct = Math.round((n / totalOr) * 100);
-                const color = Object.values(ORIG_COLORS)[i];
+                const color = ORIG_COLORS[o] ?? '#555';
                 return (
                   <div key={o} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />

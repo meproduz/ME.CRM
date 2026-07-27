@@ -450,10 +450,10 @@ export default function DashboardPage() {
           <div className="dash-chart-card">
             <div className="dash-section-title">Leads por origem</div>
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {ORIGENS.map((o, i) => {
+              {ORIGENS.map((o) => {
                 const n   = leads.filter((l) => l.orig === o).length;
                 const pct = leads.length ? Math.round((n / leads.length) * 100) : 0;
-                const color = Object.values(ORIG_COLORS)[i] as string;
+                const color = ORIG_COLORS[o] ?? '#555';
                 return (
                   <div key={o} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, boxShadow: n > 0 ? `0 0 5px ${color}88` : 'none' }} />

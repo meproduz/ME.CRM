@@ -256,6 +256,18 @@ export function useLeads() {
     dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, followup: data } });
   }, [state.leads, dispatch]);
 
+  // ─── Salvar qualificação ICP ─────────────────────────────────────────────
+
+  const saveICP = useCallback(async (leadId: string, score: number, label: string) => {
+    const lead = state.leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    await supabase.from('leads').update({ icp_score: score, icp_label: label }).eq('id', leadId);
+    const entry = `🎯 ${hoje()} ${agora()} — ICP: ${label} (${score}/100)`;
+    await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
+    dispatch({ type: 'SET_ICP', payload: { leadId, icp_score: score, icp_label: label } });
+    dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
+  }, [state.leads, dispatch]);
+
   // ─── Exportar CSV ─────────────────────────────────────────────────────────
 
   const exportCSV = useCallback(() => {
@@ -316,5 +328,6 @@ export function useLeads() {
     setFollowup,
     exportCSV,
     importLeads,
+    saveICP,
   };
 }

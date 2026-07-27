@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
-import { KANBAN_COLS, VAL, ORIG_COLORS, type Lead, type LeadStatus } from '@/types';
+import { KANBAN_COLS, VAL, ORIG_COLORS, ICP_BADGE, type Lead, type LeadStatus } from '@/types';
 import LeadPanel from '@/components/LeadPanel';
 import NovoLeadModal from '@/components/NovoLeadModal';
 
@@ -228,6 +228,22 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
         </span>
         <span className="card-int">{lead.int?.split(' - ')[0] ?? '—'}</span>
       </div>
+
+      {/* Badge ICP */}
+      {lead.icp_label && (
+        <div style={{ marginTop: 6 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '2px 8px', borderRadius: 100,
+            background: ICP_BADGE[lead.icp_label]?.bg ?? 'rgba(100,100,100,0.1)',
+            color: ICP_BADGE[lead.icp_label]?.color ?? '#888',
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
+          }}>
+            {ICP_BADGE[lead.icp_label]?.icon} {lead.icp_label}
+            {lead.icp_score != null ? ` · ${lead.icp_score}` : ''}
+          </span>
+        </div>
+      )}
     </motion.div>
   );
 }

@@ -5,14 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
-import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, VAL, type Lead, type LeadStatus } from '@/types';
+import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, ICP_BADGE, type Lead, type LeadStatus } from '@/types';
 import { exportLeadPDF, exportLeadCSV } from '@/lib/exportLead';
+import ICPModal from '@/components/ICPModal';
 
 const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700'];
 
 export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const { state } = useCRM();
-  const { loadHist, addNota, moveLead, updateField, deleteLead, setFollowup } = useLeads();
+  const { loadHist, addNota, moveLead, updateField, deleteLead, setFollowup, saveICP } = useLeads();
 
   const [nota, setNota] = useState('');
   const [fuDate, setFuDate] = useState(lead.followup ?? '');
@@ -21,6 +22,9 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const [perdaObs, setPerdaObs] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [showICP, setShowICP]         = useState(false);
+  const [gateOpen, setGateOpen]       = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   const ld = leadData(lead);
   const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
@@ -55,7 +59,24 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
 
   async function handleMove(status: string) {
     if (status === 'perdido') { setPerdaOpen(true); return; }
+    // Gate ICP: exige qualificação antes de avançar para proposta ou negociação
+    if ((status === 'proposta' || status === 'negociacao') && !lead.icp_score) {
+      setPendingStatus(status);
+      setGateOpen(true);
+      return;
+    }
     await moveLead(lead.id, status);
+  }
+
+  async function handleConfirmICP(score: number, label: string) {
+    await saveICP(lead.id, score, label);
+    setShowICP(false);
+    // Se veio de um gate, avança para a etapa após qualificar
+    if (pendingStatus) {
+      const s = pendingStatus;
+      setPendingStatus(null);
+      await moveLead(lead.id, s);
+    }
   }
 
   async function handleConfirmarPerda() {
@@ -151,10 +172,55 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
             </div>
           </div>
 
-          {/* Qualificação */}
+          {/* Qualificação automática */}
           <div className="qual-wrap">
             <div className="ql">Qualificação (<span>{score}</span>/5)</div>
             <div className="qt"><div className="qf" style={{ width: `${(score / 5) * 100}%` }} /></div>
+          </div>
+
+          {/* ICP */}
+          <div style={{ marginBottom: 14 }}>
+            <div className="plabel" style={{ marginBottom: 8 }}>ICP — Diagnóstico</div>
+            {lead.icp_score != null && lead.icp_label ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 14px', borderRadius: 100,
+                  background: ICP_BADGE[lead.icp_label]?.bg ?? 'rgba(100,100,100,0.1)',
+                  color: ICP_BADGE[lead.icp_label]?.color ?? '#888',
+                  fontSize: 12, fontWeight: 700,
+                }}>
+                  {ICP_BADGE[lead.icp_label]?.icon} {lead.icp_label} · {lead.icp_score}/100
+                </div>
+                <button
+                  onClick={() => setShowICP(true)}
+                  style={{
+                    padding: '5px 10px', background: 'none',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 7, color: 'var(--text3)', fontSize: 11,
+                    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                  }}
+                >
+                  Re-qualificar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowICP(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  width: '100%', padding: '10px 14px',
+                  background: 'rgba(201,162,39,0.06)',
+                  border: '1px solid rgba(201,162,39,0.25)',
+                  borderRadius: 8, color: '#C9A227',
+                  fontSize: 12.5, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                  justifyContent: 'center',
+                }}
+              >
+                🎯 Qualificar lead (ICP)
+              </button>
+            )}
           </div>
 
           {/* Mover para etapa */}
@@ -306,6 +372,62 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
           <button className="p-dbtn" onClick={handleDelete}>Remover</button>
         </div>
       </motion.div>
+
+      {/* Modal ICP */}
+      <AnimatePresence>
+        {showICP && (
+          <ICPModal
+            leadNome={lead.nome}
+            existingScore={lead.icp_score}
+            existingLabel={lead.icp_label}
+            onConfirm={handleConfirmICP}
+            onClose={() => { setShowICP(false); setPendingStatus(null); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Gate: qualificação obrigatória antes de proposta/negociação */}
+      <AnimatePresence>
+        {gateOpen && (
+          <motion.div className="modal-overlay" style={{ display: 'flex', zIndex: 450 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="modal" style={{ maxWidth: 380 }}
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>🎯</div>
+                <h3 style={{ margin: 0, fontSize: 15 }}>Lead não qualificado</h3>
+              </div>
+              <p style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
+                Qualifique este lead antes de avançar para{' '}
+                <strong>{pendingStatus === 'proposta' ? 'Proposta' : 'Negociação'}</strong>.
+                Isso garante que o seu tempo comercial vai para quem tem real potencial.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button className="msbtn" style={{ width: '100%' }}
+                  onClick={() => { setGateOpen(false); setShowICP(true); }}>
+                  🎯 Qualificar agora
+                </button>
+                <button
+                  style={{
+                    width: '100%', padding: '10px',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 8, color: 'var(--text3)', fontSize: 12,
+                    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                  }}
+                  onClick={() => { setGateOpen(false); moveLead(lead.id, pendingStatus!); setPendingStatus(null); }}
+                >
+                  Avançar mesmo assim
+                </button>
+                <button className="mcbtn" onClick={() => { setGateOpen(false); setPendingStatus(null); }}>
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal perda */}
       <AnimatePresence>

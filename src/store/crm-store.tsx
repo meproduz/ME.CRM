@@ -86,6 +86,7 @@ type Action =
   | { type: 'SET_META'; payload: number }
   | { type: 'SET_PAGINATION'; payload: { page: number; hasMore: boolean; totalCount: number } }
   | { type: 'ADD_HIST_ENTRY'; payload: { leadId: string; entry: string; statusChangedAt?: string } }
+  | { type: 'SET_ICP'; payload: { leadId: string; icp_score: number; icp_label: string } }
   | { type: 'SET_PERIODO'; payload: CRMState['periodoAtivo'] };
 
 function reducer(state: CRMState, action: Action): CRMState {
@@ -120,6 +121,15 @@ function reducer(state: CRMState, action: Action): CRMState {
                   ? { status_changed_at: action.payload.statusChangedAt }
                   : {}),
               }
+            : l
+        ),
+      };
+    case 'SET_ICP':
+      return {
+        ...state,
+        leads: state.leads.map((l) =>
+          l.id === action.payload.leadId
+            ? { ...l, icp_score: action.payload.icp_score, icp_label: action.payload.icp_label }
             : l
         ),
       };

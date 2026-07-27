@@ -41,6 +41,8 @@ export interface Lead {
   motivo_perda: string | null;
   created_at: string;
   status_changed_at?: string | null;
+  icp_score?: number | null;
+  icp_label?: string | null;
   // Virtual (não vem do banco diretamente)
   hist: string[];
   lastContact?: string; // último entry do historico — pré-carregado para stale detection sem abrir o lead
@@ -132,6 +134,15 @@ export const ORIG_COLORS: Record<string, string> = {
   'Facebook':           '#1877F2',
   'Indicacao':          '#22C55E',
   'WhatsApp direto':    '#1D9E75',
+};
+
+// ─── ICP — badges por classificação ──────────────────────────────────────────
+
+export const ICP_BADGE: Record<string, { bg: string; color: string; icon: string }> = {
+  'ICP ideal':   { bg: 'rgba(34,197,94,0.15)',   color: '#22C55E', icon: '✓' },
+  'ICP morno':   { bg: 'rgba(245,158,11,0.15)',  color: '#F59E0B', icon: '~' },
+  'ICP frio':    { bg: 'rgba(226,75,74,0.12)',   color: '#E24B4A', icon: '↓' },
+  'Fora do ICP': { bg: 'rgba(107,114,128,0.15)', color: '#6B7280', icon: '✗' },
 };
 
 // ─── Segmentos ────────────────────────────────────────────────────────────────

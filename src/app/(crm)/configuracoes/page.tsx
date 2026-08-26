@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +11,13 @@ export default function ConfiguracoesPage() {
   const { state, dispatch } = useCRM();
   const { exportCSV, importLeads } = useLeads();
   const fileRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.currentUser && state.currentUser.role !== 'admin') {
+      router.replace('/dashboard');
+    }
+  }, [state.currentUser, router]);
 
   const [metaInput, setMetaInput] = useState(String(state.metaMensal));
   // Sync input when DB value loads (SET_CLIENTE fires after async fetch)
@@ -99,6 +107,9 @@ export default function ConfiguracoesPage() {
 
   const supabaseBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   const webhookUrl = `${supabaseBase}/functions/v1/webhook-lead?cliente_id=${state.currentUser?.cliente_id ?? '...'}`;
+
+  if (!state.currentUser) return null;
+  if (state.currentUser.role !== 'admin') return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

@@ -160,19 +160,21 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
             </div>
           </div>
         )}
-        <div
-          className={`nav-item${pathname === '/configuracoes' ? ' active' : ''}`}
-          onClick={() => handleNav('/configuracoes')}
-          style={{ border: '1px solid transparent' }}
-        >
-          <span className="nav-icon">
-            <svg viewBox="0 0 18 18" fill="none" width="18" height="18">
-              <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </span>
-          <span className="nav-text" style={{ fontSize: '12px', color: 'var(--text3)' }}>Configurações</span>
-        </div>
+        {state.currentUser?.role === 'admin' && (
+          <div
+            className={`nav-item${pathname === '/configuracoes' ? ' active' : ''}`}
+            onClick={() => handleNav('/configuracoes')}
+            style={{ border: '1px solid transparent' }}
+          >
+            <span className="nav-icon">
+              <svg viewBox="0 0 18 18" fill="none" width="18" height="18">
+                <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </span>
+            <span className="nav-text" style={{ fontSize: '12px', color: 'var(--text3)' }}>Configurações</span>
+          </div>
+        )}
 
         <div className="user-info" onClick={handleLogout}>
           <div className="user-av">{userInitials}</div>

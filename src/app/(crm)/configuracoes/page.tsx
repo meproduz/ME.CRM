@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { supabase } from '@/lib/supabase';
-import { KANBAN_COLS, type WaTemplates } from '@/types';
+import { KANBAN_COLS, ORIGENS_GROUPS, type WaTemplates } from '@/types';
+
+const CANAIS_PAGOS = ORIGENS_GROUPS.find((g) => g.label.includes('Tráfego Pago'))?.items ?? [];
 
 export default function ConfiguracoesPage() {
   const { state, dispatch } = useCRM();
@@ -65,6 +67,14 @@ export default function ConfiguracoesPage() {
   function addProduto() {
     const next = [...state.produtos, { nome: '', valor: 0 }];
     dispatch({ type: 'SET_PRODUTOS', payload: next });
+  }
+
+  // ─── Investimento por canal ──────────────────────────────────────────────
+
+  function updateInvestimento(canal: string, val: string) {
+    const next = { ...state.investimentos, [canal]: Number(val) || 0 };
+    dispatch({ type: 'SET_INVESTIMENTOS', payload: next });
+    localStorage.setItem('mp_investimentos', JSON.stringify(next));
   }
 
   // ─── Templates WA ─────────────────────────────────────────────────────────
@@ -179,6 +189,27 @@ export default function ConfiguracoesPage() {
             <button className="config-btn" style={{ marginTop: 10, width: '100%' }} onClick={addProduto}>
               + Adicionar produto
             </button>
+          </div>
+
+          {/* Investimento por canal */}
+          <div className="config-section">
+            <div className="config-title">Investimento em marketing (mensal)</div>
+            <div className="config-sub" style={{ marginBottom: 14 }}>
+              Usado pra calcular o ROI real por canal no Painel Gestor — sem isso, só dá pra ver taxa de conversão, não retorno sobre o valor gasto.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {CANAIS_PAGOS.map((canal) => (
+                <div key={canal} className="config-row">
+                  <div className="config-label" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 13, color: 'var(--text2)' }}>
+                    {canal}
+                  </div>
+                  <input className="config-input" type="number" style={{ width: 140 }}
+                    placeholder="R$ 0"
+                    defaultValue={state.investimentos[canal] || ''}
+                    onBlur={(e) => updateInvestimento(canal, e.target.value)} />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Templates WA por etapa */}

@@ -43,6 +43,11 @@ export interface Lead {
   status_changed_at?: string | null;
   icp_score?: number | null;
   icp_label?: string | null;
+  // Autoria e soft-delete — requerem migration (ver supabase-migration-lixeira-autoria.sql)
+  criado_por?: string | null;
+  criado_por_nome?: string | null;
+  deletado_em?: string | null;
+  deletado_por_nome?: string | null;
   // Virtual (não vem do banco diretamente)
   hist: string[];
   lastContact?: string; // último entry do historico — pré-carregado para stale detection sem abrir o lead
@@ -96,7 +101,7 @@ export interface KanbanCol {
 }
 
 export const KANBAN_COLS: KanbanCol[] = [
-  { id: 'novo',        label: 'Novo',         color: '#C9A227' },
+  { id: 'novo',        label: 'Novo',         color: 'var(--gold)' },
   { id: 'contato',     label: 'Em contato',   color: '#3B82F6' },
   { id: 'proposta',    label: 'Proposta',     color: '#8B5CF6' },
   { id: 'negociacao',  label: 'Negociação',   color: '#F97316' },
@@ -144,6 +149,18 @@ export const ICP_BADGE: Record<string, { bg: string; color: string; icon: string
   'ICP frio':    { bg: 'rgba(226,75,74,0.12)',   color: '#E24B4A', icon: '↓' },
   'Fora do ICP': { bg: 'rgba(107,114,128,0.15)', color: '#6B7280', icon: '✗' },
 };
+
+// ─── Motivos de perda pré-definidos ───────────────────────────────────────────
+
+export const MOTIVOS_PERDA = [
+  'Sem orçamento',
+  'Escolheu concorrente',
+  'Não respondeu',
+  'Proposta rejeitada',
+  'Timing ruim',
+  'Problema interno',
+  'Outro',
+];
 
 // ─── Segmentos ────────────────────────────────────────────────────────────────
 

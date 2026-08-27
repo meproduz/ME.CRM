@@ -112,27 +112,68 @@ export function getLeadValor(l: Partial<Lead>, val: Record<string, number> = VAL
       return v < 100 ? Math.round(v * 1000) : v;
     }
   }
-  if (l.int) {
-    const key = Object.keys(val).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
+  const referencia = l.int || l.seg;
+  if (referencia) {
+    const key = Object.keys(val).find((k) => referencia.toLowerCase().includes(k.toLowerCase()));
     if (key) return val[key];
   }
   return 0;
 }
 
+/** Parseia um followup — aceita formato legado só-data (YYYY-MM-DD) ou
+ *  data+hora (YYYY-MM-DDTHH:MM, vindo de <input type="datetime-local">). */
+export function parseFollowup(f: string): Date {
+  return f.includes('T') ? new Date(f) : new Date(f + 'T00:00:00');
+}
+
+/** Formata um followup pra exibição: "DD/MM" (legado) ou "DD/MM HH:MM" (com hora). */
+export function fmtFollowup(f: string | null): string {
+  if (!f) return '';
+  const d = parseFollowup(f);
+  const dataStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  if (!f.includes('T')) return dataStr;
+  const horaStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${dataStr} ${horaStr}`;
+}
+
 /** Status do follow-up (vencido / hoje / em X dias) */
 export function fuStatus(followup: string | null): { text: string; color: string } | null {
   if (!followup) return null;
-  const fd = new Date(followup + 'T00:00:00');
+  const fd = parseFollowup(followup);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.ceil((fd.getTime() - today.getTime()) / 86400000);
   if (diff < 0) return { text: `⚠️ Vencido há ${-diff} dia${-diff > 1 ? 's' : ''}`, color: 'var(--red)' };
-  if (diff === 0) return { text: '📅 Hoje!', color: 'var(--accent)' };
+  if (diff === 0) return { text: `📅 Hoje${followup.includes('T') ? ` às ${fmtFollowup(followup).split(' ')[1]}` : ''}!`, color: 'var(--accent)' };
   return { text: `✓ Em ${diff} dia${diff > 1 ? 's' : ''}`, color: 'var(--green)' };
+}
+
+/** Ciclo padrão de recorrência de contato com o cliente (dias) */
+export const RECORRENCIA_DIAS = 180;
+
+/** Cliente fechado sem nenhuma atividade registrada há mais tempo que o ciclo
+ *  de recorrência — candidato a reativação/reengajamento comercial. */
+export function precisaReativar(l: {
+  status: string; hist: string[]; data?: string; created_at?: string; lastContact?: string;
+}): boolean {
+  if (l.status !== 'fechado') return false;
+  return diasAtras(ultimoContato(l.hist, leadData(l), l.lastContact)) >= RECORRENCIA_DIAS;
 }
 
 export function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
+}
+
+/** Dias entre o cadastro do lead e o momento em que foi fechado ou perdido.
+ *  Usa status_changed_at (atualizado no momento exato da última mudança de
+ *  etapa) como data de resolução — null se o lead ainda está em aberto. */
+export function diasParaResolucao(l: {
+  status: string; created_at: string; status_changed_at?: string | null;
+}): number | null {
+  if (l.status !== 'fechado' && l.status !== 'perdido') return null;
+  const fim = l.status_changed_at ? new Date(l.status_changed_at) : new Date();
+  const inicio = new Date(l.created_at);
+  return Math.max(0, Math.round((fim.getTime() - inicio.getTime()) / 86_400_000));
 }
 
 /** Retorna a data de entrada do lead em formato DD/MM.

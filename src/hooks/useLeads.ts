@@ -66,6 +66,7 @@ export function useLeads() {
           .from('leads')
           .select('*', { count: 'exact' })
           .eq('cliente_id', cid)
+          .is('deletado_em', null)
           .order('created_at', { ascending: false })
           .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
       ) as { data: Record<string, unknown>[] | null; error: unknown; count: number | null };
@@ -123,12 +124,10 @@ export function useLeads() {
         .order('created_at', { ascending: true })
     ) as { data: { descricao: string }[] | null };
     const hist = (data ?? []).map((h) => h.descricao);
-    // Extrai followup do histórico
-    const fus = hist.filter((h) => h.startsWith('📅 Followup:'));
-    const lastFu = fus[fus.length - 1];
-    const followup = lastFu && !lastFu.includes('cancelado')
-      ? lastFu.replace('📅 Followup:', '').trim() : null;
-    dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, hist, followup } });
+    // followup vem direto da coluna `leads.followup` (carregada no loadLeads e
+    // mantida via setFollowup) — não precisa (e não deve) ser reconstruído a
+    // partir do texto do histórico, que é só o registro/auditoria da mudança.
+    dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, hist } });
   }, [state.leads, dispatch]);
 
   // ─── Adicionar nota ────────────────────────────────────────────────────────
@@ -138,7 +137,8 @@ export function useLeads() {
     const now = new Date().toISOString();
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
     // Persiste status_changed_at no banco para que isStale funcione corretamente após refresh
-    await supabase.from('leads').update({ status_changed_at: now }).eq('id', leadId);
+    const { error } = await supabase.from('leads').update({ status_changed_at: now }).eq('id', leadId);
+    if (error) logger.exception('leads.status_changed_at_error', error, { metadata: { leadId } });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry, statusChangedAt: now } });
   }, [dispatch]);
 
@@ -151,19 +151,28 @@ export function useLeads() {
     // Salva status + status_changed_at + motivo_perda (se houver) em uma única chamada
     const updatePayload: Record<string, unknown> = { status: novoStatus, status_changed_at: now };
     if (motivo && novoStatus === 'perdido') updatePayload.motivo_perda = motivo;
-    await supabase.from('leads').update(updatePayload).eq('id', leadId);
+    const { error: moveError } = await supabase.from('leads').update(updatePayload).eq('id', leadId);
+    if (moveError) {
+      logger.exception('leads.move_error', moveError, { userId: state.currentUser?.id, metadata: { leadId, novoStatus } });
+      alert(`Não foi possível mover o lead: ${moveError.message}`);
+      return; // não atualiza o estado local — evita mostrar como "salvo" algo que o banco recusou
+    }
     const LABELS: Record<string, string> = {
       novo: 'Novo', contato: 'Em contato', proposta: 'Proposta',
       negociacao: 'Negociação', fechado: 'Fechado ✅', perdido: 'Perdido',
     };
     const entry = `${hoje()} ${agora()} — Movido para ${LABELS[novoStatus] ?? novoStatus}`;
-    // Registro estruturado para métricas do gestor (tipo + meta_json)
-    await supabase.from('leads_historico').insert({
+    // Registro estruturado para métricas do gestor (tipo + meta_json) — não bloqueia
+    // a movimentação principal se falhar, mas registra pra não sumir em silêncio.
+    // Requer migration: leads_historico.tipo / leads_historico.meta_json (ver
+    // supabase-migration-lixeira-autoria.sql).
+    const { error: histError } = await supabase.from('leads_historico').insert({
       lead_id: leadId,
       descricao: entry,
       tipo: 'status_change',
       meta_json: { from: lead.status, to: novoStatus, at: now },
     });
+    if (histError) logger.exception('leads.status_history_error', histError, { metadata: { leadId, novoStatus } });
     if (motivo) {
       const motivoEntry = `📝 ${hoje()} ${agora()} — Motivo de perda: ${motivo}`;
       await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: motivoEntry, tipo: 'anotacao' });
@@ -217,9 +226,20 @@ export function useLeads() {
       }
     }
 
+    // criado_por/criado_por_nome não passam pelo whitelist acima de propósito —
+    // são sempre definidos aqui a partir da sessão autenticada, nunca a partir
+    // de input arbitrário do formulário (evita spoofing de autoria).
+    // Requer migration: leads.criado_por / leads.criado_por_nome (ver
+    // supabase-migration-lixeira-autoria.sql).
+    const payload = {
+      ...fields,
+      criado_por: state.currentUser?.id ?? null,
+      criado_por_nome: state.currentUser?.nome ?? null,
+    };
+
     const { data, error } = await dbQuery(
       { operation: 'insert', table: 'leads', userId: state.currentUser?.id, clienteId: fields.cliente_id },
-      () => supabase.from('leads').insert(fields).select().single()
+      () => supabase.from('leads').insert(payload).select().single()
     ) as { data: Lead | null; error: unknown };
     if (error || !data) throw error;
     const newLead: Lead = { ...data, hist: [] };
@@ -228,45 +248,81 @@ export function useLeads() {
     await supabase.from('leads_historico').insert({ lead_id: data.id, descricao: entry });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId: data.id, entry } });
     return newLead;
-  }, [state.currentUser?.id, dispatch]);
+  }, [state.currentUser?.id, state.currentUser?.nome, dispatch]);
 
-  // ─── Deletar lead ─────────────────────────────────────────────────────────
+  // ─── Deletar lead (soft delete — vai pra Lixeira, não apaga de verdade) ────
+  // Requer migration: leads.deletado_em / leads.deletado_por_nome (ver
+  // supabase-migration-lixeira-autoria.sql).
 
   const deleteLead = useCallback(async (leadId: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
-    await dbQuery(
-      { operation: 'delete', table: 'leads_historico', userId: state.currentUser?.id, clienteId: lead?.cliente_id },
-      () => supabase.from('leads_historico').delete().eq('lead_id', leadId)
-    );
-    await dbQuery(
-      { operation: 'delete', table: 'leads', userId: state.currentUser?.id, clienteId: lead?.cliente_id },
-      () => supabase.from('leads').delete().eq('id', leadId)
-    );
+    const { error } = await dbQuery(
+      { operation: 'update', table: 'leads', userId: state.currentUser?.id, clienteId: lead?.cliente_id },
+      () => supabase.from('leads').update({
+        deletado_em: new Date().toISOString(),
+        deletado_por_nome: state.currentUser?.nome ?? null,
+      }).eq('id', leadId)
+    ) as { error: unknown };
+    if (error) {
+      logger.exception('leads.delete_error', error, { userId: state.currentUser?.id, metadata: { leadId } });
+      alert('Não foi possível remover o lead. Tente novamente.');
+      return;
+    }
     dispatch({ type: 'REMOVE_LEAD', payload: leadId });
-  }, [state.leads, state.currentUser?.id, dispatch]);
+  }, [state.leads, state.currentUser?.id, state.currentUser?.nome, dispatch]);
+
+  // ─── Restaurar lead da lixeira ──────────────────────────────────────────────
+
+  const restoreLead = useCallback(async (lead: Lead): Promise<boolean> => {
+    const { data, error } = await supabase.from('leads')
+      .update({ deletado_em: null, deletado_por_nome: null })
+      .eq('id', lead.id)
+      .select()
+      .single();
+    if (error || !data) {
+      logger.exception('leads.restore_error', error, { userId: state.currentUser?.id, metadata: { leadId: lead.id } });
+      alert('Não foi possível restaurar o lead.');
+      return false;
+    }
+    dispatch({ type: 'ADD_LEAD', payload: { ...(data as Lead), hist: [] } });
+    return true;
+  }, [state.currentUser?.id, dispatch]);
 
   // ─── Follow-up ────────────────────────────────────────────────────────────
 
   const setFollowup = useCallback(async (leadId: string, data: string | null) => {
     const lead = state.leads.find((l) => l.id === leadId);
     if (!lead) return;
+    // Persiste na coluna de verdade — é a fonte oficial do dado, lida direto
+    // por loadLeads. O log abaixo é só o registro histórico da mudança.
+    const { error } = await supabase.from('leads').update({ followup: data }).eq('id', leadId);
+    if (error) {
+      logger.exception('leads.followup_error', error, { userId: state.currentUser?.id, metadata: { leadId } });
+      alert(`Não foi possível salvar o follow-up: ${error.message}`);
+      return;
+    }
     const entry = data ? `📅 Followup: ${data}` : `📅 Followup: cancelado`;
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
     dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, followup: data } });
-  }, [state.leads, dispatch]);
+  }, [state.leads, state.currentUser?.id, dispatch]);
 
   // ─── Salvar qualificação ICP ─────────────────────────────────────────────
 
   const saveICP = useCallback(async (leadId: string, score: number, label: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
     if (!lead) return;
-    await supabase.from('leads').update({ icp_score: score, icp_label: label }).eq('id', leadId);
+    const { error } = await supabase.from('leads').update({ icp_score: score, icp_label: label }).eq('id', leadId);
+    if (error) {
+      logger.exception('leads.icp_error', error, { userId: state.currentUser?.id, metadata: { leadId } });
+      alert(`Não foi possível salvar a qualificação: ${error.message}`);
+      return;
+    }
     const entry = `🎯 ${hoje()} ${agora()} — ICP: ${label} (${score}/100)`;
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
     dispatch({ type: 'SET_ICP', payload: { leadId, icp_score: score, icp_label: label } });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
-  }, [state.leads, dispatch]);
+  }, [state.leads, state.currentUser?.id, dispatch]);
 
   // ─── Exportar CSV ─────────────────────────────────────────────────────────
 
@@ -325,6 +381,7 @@ export function useLeads() {
     updateField,
     createLead,
     deleteLead,
+    restoreLead,
     setFollowup,
     exportCSV,
     importLeads,

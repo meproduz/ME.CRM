@@ -20,6 +20,10 @@ const NAV_VENDEDOR = [
     icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><circle cx="6" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M1 15c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M13 8l2 2 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },
   {
+    href: '/agenda', label: 'Agenda',
+    icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><rect x="2" y="3" width="14" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M2 7h14M5.5 1.5v3M12.5 1.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  },
+  {
     href: '/relatorios', label: 'Relatórios',
     icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M2 14V8M6 14V5M10 14V9M14 14V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   },
@@ -34,6 +38,10 @@ const NAV_ADMIN_EXTRA = [
     href: '/gestor', label: 'Painel Gestor',
     icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.4"/><path d="M9 5v4l3 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     gold: true,
+  },
+  {
+    href: '/lixeira', label: 'Lixeira',
+    icon: <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M3 5h12M7 5V3.5a1 1 0 011-1h2a1 1 0 011 1V5M4.5 5l.7 9.2a1 1 0 001 .8h5.6a1 1 0 001-.8l.7-9.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },
 ];
 

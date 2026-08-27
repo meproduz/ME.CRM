@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
 import type { Lead, Usuario, Cliente, Produto, WaTemplates } from '@/types';
+import { BRAND_NAME } from '@/lib/brand';
+
+const NOME_NEGOCIO = BRAND_NAME ?? 'MeProduz. Studio';
 
 // ─── Estado global ─────────────────────────────────────────────────────────────
 
@@ -16,6 +19,7 @@ interface CRMState {
   waTemplate: string;
   waTemplates: WaTemplates;
   produtos: Produto[];
+  investimentos: Record<string, number>;
   metaMensal: number;
   page: number;
   hasMore: boolean;
@@ -24,7 +28,7 @@ interface CRMState {
 }
 
 const DEFAULT_WA =
-  'Olá {nome}! Tudo bem? Aqui é da MeProduz. Studio 👋 Vi seu interesse e gostaria de te apresentar nossas soluções. Posso te ajudar?';
+  `Olá {nome}! Tudo bem? Aqui é da ${NOME_NEGOCIO} 👋 Vi seu interesse e gostaria de te apresentar nossas soluções. Posso te ajudar?`;
 
 function loadLocalStorage<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -45,11 +49,11 @@ function getInitialState(): CRMState {
     isLoading: false,
     waTemplate: loadLocalStorage('mp_wa_template', DEFAULT_WA),
     waTemplates: loadLocalStorage('mp_wa_templates', {
-      novo:       'Olá {nome}! Tudo bem? Somos a MeProduz. Studio 👋 Posso te apresentar nossas soluções?',
+      novo:       `Olá {nome}! Tudo bem? Somos a ${NOME_NEGOCIO} 👋 Posso te apresentar nossas soluções?`,
       contato:    'Olá {nome}! Tudo bem? Dando um retorno sobre nosso papo 😊 Podemos agendar uma conversa?',
       proposta:   'Olá {nome}! Sua proposta está pronta ✅ Quando posso te apresentar?',
       negociacao: 'Olá {nome}! Tudo certo com a proposta? Posso tirar alguma dúvida? 💬',
-      fechado:    'Olá {nome}! Bem-vindo(a) à família MeProduz. Studio! 🎉 Vamos começar?',
+      fechado:    `Olá {nome}! Bem-vindo(a) à família ${NOME_NEGOCIO}! 🎉 Vamos começar?`,
       perdido:    'Olá {nome}! Posso ajudar com alguma dúvida ou apresentar uma nova solução?',
     }),
     produtos: loadLocalStorage('mp_produtos', [
@@ -58,6 +62,8 @@ function getInitialState(): CRMState {
       { nome: 'Expansão',    valor: 3159 },
       { nome: 'Só tráfego',  valor: 700  },
     ]),
+    // Investimento mensal por canal pago — usado pra calcular ROI real (não só conversão)
+    investimentos: loadLocalStorage('mp_investimentos', {} as Record<string, number>),
     metaMensal: 60000,
     page: 0,
     hasMore: true,
@@ -83,6 +89,7 @@ type Action =
   | { type: 'SET_WA_TEMPLATE'; payload: string }
   | { type: 'SET_WA_TEMPLATES'; payload: WaTemplates }
   | { type: 'SET_PRODUTOS'; payload: Produto[] }
+  | { type: 'SET_INVESTIMENTOS'; payload: Record<string, number> }
   | { type: 'SET_META'; payload: number }
   | { type: 'SET_PAGINATION'; payload: { page: number; hasMore: boolean; totalCount: number } }
   | { type: 'ADD_HIST_ENTRY'; payload: { leadId: string; entry: string; statusChangedAt?: string } }
@@ -105,6 +112,7 @@ function reducer(state: CRMState, action: Action): CRMState {
     case 'SET_WA_TEMPLATE': return { ...state, waTemplate: action.payload };
     case 'SET_WA_TEMPLATES': return { ...state, waTemplates: action.payload };
     case 'SET_PRODUTOS': return { ...state, produtos: action.payload };
+    case 'SET_INVESTIMENTOS': return { ...state, investimentos: action.payload };
     case 'SET_META': return { ...state, metaMensal: action.payload };
     case 'SET_PAGINATION': return { ...state, ...action.payload };
     case 'SET_PERIODO': return { ...state, periodoAtivo: action.payload };

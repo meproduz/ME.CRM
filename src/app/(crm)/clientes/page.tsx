@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, leadData, getLeadValor } from '@/lib/utils';
-import { VAL } from '@/types';
+import { fmtR, diasAtras, leadData, getLeadValor, precisaReativar, ultimoContato } from '@/lib/utils';
 
 export default function ClientesPage() {
   const { state, dispatch } = useCRM();
@@ -40,14 +39,22 @@ export default function ClientesPage() {
             {clientes.map((l) => {
               const val = getLeadValor(l);
               const dias = diasAtras(leadData(l));
-              const waMsg = encodeURIComponent(
-                ((state.waTemplates as any)[l.status] || state.waTemplate).replace('{nome}', l.nome)
-              );
+              const reativar = precisaReativar(l);
+              const diasSemAtividade = diasAtras(ultimoContato(l.hist, leadData(l), l.lastContact));
+              const waMsg = reativar
+                ? encodeURIComponent(`Olá ${l.nome}! Faz um tempo que a gente não conversa — que tal retomarmos o papo? 😊`)
+                : encodeURIComponent(((state.waTemplates as any)[l.status] || state.waTemplate).replace('{nome}', l.nome));
               return (
                 <div key={l.id} className="cliente-card" onClick={() => openLead(l.id)}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <div className="cliente-nome">{l.nome}</div>
-                    <span style={{ fontSize: 9, fontWeight: 600, background: 'rgba(34,197,94,0.1)', color: 'var(--green)', padding: '2px 7px', borderRadius: 4 }}>ATIVO</span>
+                    {reativar ? (
+                      <span style={{ fontSize: 9, fontWeight: 600, background: 'rgba(16,185,129,0.12)', color: '#10B981', padding: '2px 7px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                        💤 RETORNO ({diasSemAtividade}d)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 9, fontWeight: 600, background: 'rgba(34,197,94,0.1)', color: 'var(--green)', padding: '2px 7px', borderRadius: 4 }}>ATIVO</span>
+                    )}
                   </div>
                   <div className="cliente-srv">{l.int ? l.int.split(' - ')[0] : l.seg || 'Serviço não definido'}</div>
                   <div className="cliente-meta">

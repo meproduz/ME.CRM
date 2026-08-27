@@ -26,6 +26,7 @@
   --gold3:   #9A7A1A;
   --accent:  #C9A227;
   --accent2: #A67C00;
+  --gold-rgb: 201,162,39;
 
   /* ── Semantic ── */
   --red:     #F04747;
@@ -789,7 +790,7 @@ input:-webkit-autofill:focus {
   transition: all 0.12s;
   letter-spacing: -0.1px;
 }
-.f-pill:hover { border-color: rgba(201,162,39,0.25); color: var(--gold2); }
+.f-pill:hover { border-color: rgba(var(--gold-rgb),0.35); color: var(--gold); }
 .f-pill.active {
   background: rgba(201,162,39,0.09);
   border-color: rgba(201,162,39,0.25);
@@ -1246,7 +1247,7 @@ input:-webkit-autofill:focus {
   transition: all 0.15s;
   box-shadow: 0 4px 16px rgba(201,162,39,0.25);
 }
-.msbtn:hover { background: var(--gold2); transform: translateY(-1px); }
+.msbtn:hover { filter: brightness(1.12); box-shadow: 0 6px 20px rgba(var(--gold-rgb),0.4); transform: translateY(-1px); }
 .msbtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 /* ══════════════════════════════════════════════════════
@@ -1320,7 +1321,7 @@ input:-webkit-autofill:focus {
   cursor: pointer;
   transition: all 0.12s;
 }
-.periodo-btn:hover { border-color: rgba(201,162,39,0.25); color: var(--gold2); }
+.periodo-btn:hover { border-color: rgba(var(--gold-rgb),0.35); color: var(--gold); }
 .periodo-btn.active {
   background: rgba(201,162,39,0.09);
   border-color: rgba(201,162,39,0.25);
@@ -1447,7 +1448,7 @@ input:-webkit-autofill:focus {
   white-space: nowrap;
   box-shadow: 0 4px 16px rgba(201,162,39,0.2);
 }
-.config-btn:hover { background: var(--gold2); transform: translateY(-1px); }
+.config-btn:hover { filter: brightness(1.12); box-shadow: 0 6px 20px rgba(var(--gold-rgb),0.35); transform: translateY(-1px); }
 
 /* Produtos */
 .prod-item { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -1566,7 +1567,7 @@ input:-webkit-autofill:focus {
 /* Nome em gradiente dourado */
 .dash-greeting em {
   font-style: normal;
-  background: linear-gradient(135deg, #F0CC50 0%, #C9A227 60%, #A67C00 100%);
+  background: linear-gradient(135deg, var(--gold3) 0%, var(--gold) 55%, var(--gold2) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

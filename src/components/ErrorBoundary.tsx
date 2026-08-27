@@ -151,10 +151,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
               style={{
                 flex: 1,
                 padding: '10px',
-                background: 'rgba(201,162,39,0.1)',
-                border: '1px solid rgba(201,162,39,0.25)',
+                background: 'rgba(var(--gold-rgb),0.1)',
+                border: '1px solid rgba(var(--gold-rgb),0.25)',
                 borderRadius: 8,
-                color: '#E8BB3A',
+                color: 'var(--gold2)',
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',

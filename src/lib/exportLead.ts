@@ -5,7 +5,16 @@
  */
 
 import type { Lead } from '@/types';
-import { fmtR, qualScore, leadData, leadHora, getLeadValor } from '@/lib/utils';
+import { fmtR, qualScore, leadData, leadHora, getLeadValor, diasParaResolucao } from '@/lib/utils';
+import { BRAND_NAME, BRAND_COLOR_PRIMARY, BRAND_COLOR_SECONDARY, hexToRgbTriplet } from '@/lib/brand';
+
+// Este HTML é aberto num popup próprio (document.write) — não herda o <head>
+// do app principal, então as variáveis de marca precisam ser definidas aqui.
+const GOLD      = BRAND_COLOR_PRIMARY ?? '#C9A227';
+const GOLD2     = BRAND_COLOR_SECONDARY ?? '#E8BB3A';
+const GOLD3     = '#9A7A1A';
+const GOLD_RGB  = hexToRgbTriplet(GOLD);
+const NOME_MARCA = BRAND_NAME ?? 'Mp. CRM';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +50,7 @@ export function exportLeadCSV(lead: Lead): void {
   const ld    = leadData(lead);
   const score = qualScore(lead);
   const valor = getLeadValor(lead);
+  const dias  = diasParaResolucao(lead);
 
   const rows: string[] = [
     'DADOS DO LEAD',
@@ -57,6 +67,8 @@ export function exportLeadCSV(lead: Lead): void {
     `Follow-up agendado,${csvEsc(lead.followup)}`,
     `Data de entrada,${csvEsc(ld)}`,
     `Hora de entrada,${csvEsc(leadHora(lead))}`,
+    `Cadastrado por,${csvEsc(lead.criado_por_nome)}`,
+    ...(dias != null ? [`Dias até ${lead.status === 'fechado' ? 'fechamento' : 'perda'},${dias}`] : []),
     `Observação inicial,${csvEsc(lead.obs)}`,
     `Motivo de perda,${csvEsc(lead.motivo_perda)}`,
     `Lead ID,${csvEsc(lead.id)}`,
@@ -97,6 +109,7 @@ export function exportLeadPDF(lead: Lead): void {
   const statusLabel = STATUS_LABEL[lead.status] ?? lead.status;
   const statusColor = STATUS_COLOR[lead.status] ?? '#888';
   const scorePct    = Math.round((score / 5) * 100);
+  const dias        = diasParaResolucao(lead);
   const now         = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 
   // ── Build timeline ────────────────────────────────────────────────────────
@@ -158,19 +171,19 @@ body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;max-width:780p
 
 /* Print bar */
 .print-bar{position:sticky;top:0;background:#fafafa;border-bottom:1px solid #eeeef4;padding:10px 32px;display:flex;justify-content:flex-end;z-index:99}
-.print-btn{padding:9px 22px;background:#C9A227;border:none;border-radius:8px;font-family:'Comfortaa',sans-serif;font-size:13px;font-weight:700;color:#07050a;cursor:pointer;display:flex;align-items:center;gap:6px}
+.print-btn{padding:9px 22px;background:${GOLD};border:none;border-radius:8px;font-family:'Comfortaa',sans-serif;font-size:13px;font-weight:700;color:#07050a;cursor:pointer;display:flex;align-items:center;gap:6px}
 .print-btn:hover{background:#dbb82f}
 @media print{.print-bar{display:none}}
 
 /* Gold top line */
-.gold-line{height:3px;background:linear-gradient(90deg,#B8901F,#DDB035 40%,#E8BB3A 65%,#C9A227)}
+.gold-line{height:3px;background:linear-gradient(90deg,${GOLD3},${GOLD2} 40%,${GOLD2} 65%,${GOLD})}
 
 /* Header */
 .doc-header{padding:20px 32px 16px;border-bottom:1px solid #f0f0f4;display:flex;align-items:center;justify-content:space-between}
 .brand-row{display:flex;align-items:center;gap:10px}
-.brand-icon{width:34px;height:34px;border-radius:9px;background:#C9A227;display:flex;align-items:center;justify-content:center;font-family:'Comfortaa',sans-serif;font-size:12px;font-weight:700;color:#07050a;flex-shrink:0}
+.brand-icon{width:34px;height:34px;border-radius:9px;background:${GOLD};display:flex;align-items:center;justify-content:center;font-family:'Comfortaa',sans-serif;font-size:12px;font-weight:700;color:#07050a;flex-shrink:0}
 .brand-name{font-family:'Comfortaa',sans-serif;font-size:14px;font-weight:700;color:#0a0a1a}
-.brand-name span{color:#C9A227}
+.brand-name span{color:${GOLD}}
 .doc-sub{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#c0c0cc;margin-top:1px}
 .doc-date{font-size:10px;color:#c0c0cc;text-align:right}
 
@@ -189,7 +202,7 @@ body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;max-width:780p
 
 .score-row{display:flex;align-items:center;gap:8px;margin-top:2px}
 .score-track{width:72px;height:4px;background:#e4e4ef;border-radius:2px;overflow:hidden}
-.score-fill{height:4px;background:#C9A227;border-radius:2px}
+.score-fill{height:4px;background:${GOLD};border-radius:2px}
 .score-num{font-size:11px;font-weight:700;color:#888}
 
 .perda-tag{display:inline-block;padding:4px 10px;background:rgba(226,75,74,0.08);border:1px solid rgba(226,75,74,0.2);border-radius:6px;font-size:11px;color:#E24B4A;margin-top:2px}
@@ -203,13 +216,13 @@ body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;max-width:780p
 .tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;position:relative;z-index:1}
 .tl-note{background:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.14)}
 .tl-move{background:#22C55E}
-.tl-obs{background:#C9A227;box-shadow:0 0 0 3px rgba(201,162,39,0.14)}
+.tl-obs{background:${GOLD};box-shadow:0 0 0 3px rgba(${GOLD_RGB},0.14)}
 .tl-content{flex:1}
 .tl-note-header{font-size:10px;font-weight:600;color:#999;margin-bottom:5px}
 .tl-note-body{font-size:12.5px;color:#333;line-height:1.65;background:#f5f8ff;border:1px solid #e4ecff;padding:10px 13px;border-radius:0 8px 8px 8px}
 .tl-move-text{font-size:12px;color:#666;line-height:1.5;padding-top:3px}
 .tl-obs-box{background:#fffcf0;border:1px solid #f0e8cc;padding:10px 13px;border-radius:0 8px 8px 8px}
-.tl-obs-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C9A227;margin-bottom:5px}
+.tl-obs-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${GOLD};margin-bottom:5px}
 .tl-obs-body{font-size:12.5px;color:#555;line-height:1.65}
 .tl-empty{font-size:12px;color:#bbb;font-style:italic}
 
@@ -241,9 +254,9 @@ body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;max-width:780p
 
 <div class="doc-header">
   <div class="brand-row">
-    <div class="brand-icon">Mp.</div>
+    <div class="brand-icon">${htmlEsc(BRAND_NAME ? NOME_MARCA.slice(0, 2) : 'Mp.')}</div>
     <div>
-      <div class="brand-name">Mp. <span>CRM</span></div>
+      <div class="brand-name">${BRAND_NAME ? htmlEsc(NOME_MARCA) : 'Mp. <span>CRM</span>'}</div>
       <div class="doc-sub">Relatório de Lead</div>
     </div>
   </div>
@@ -295,6 +308,15 @@ body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;max-width:780p
       <div class="lf-label">Follow-up</div>
       <div class="lf-value ${!lead.followup ? 'lf-empty' : ''}">${htmlEsc(lead.followup) || 'Não agendado'}</div>
     </div>
+    <div class="lf">
+      <div class="lf-label">Cadastrado por</div>
+      <div class="lf-value ${!lead.criado_por_nome ? 'lf-empty' : ''}">${htmlEsc(lead.criado_por_nome) || 'Não registrado'}</div>
+    </div>
+    ${dias != null ? `
+    <div class="lf">
+      <div class="lf-label">${lead.status === 'fechado' ? 'Dias até fechamento' : 'Dias até perda'}</div>
+      <div class="lf-value" style="color:${lead.status === 'fechado' ? '#22C55E' : '#E24B4A'};font-weight:700">${dias} dia${dias !== 1 ? 's' : ''}</div>
+    </div>` : ''}
     ${lead.motivo_perda ? `
     <div class="lf" style="grid-column:1/-1">
       <div class="lf-label">Motivo de perda</div>
@@ -312,7 +334,7 @@ body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;max-width:780p
 </div>
 
 <div class="doc-footer">
-  <span>Me Produz. © ${new Date().getFullYear()}</span>
+  <span>${BRAND_NAME ? htmlEsc(NOME_MARCA) : 'Me Produz.'} © ${new Date().getFullYear()}</span>
   <span>Lead ID: ${htmlEsc(lead.id)}</span>
 </div>
 

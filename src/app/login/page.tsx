@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
+import { BRAND_NAME, BRAND_LOGO_URL } from '@/lib/brand';
 
 export default function LoginPage() {
   const router   = useRouter();
@@ -36,18 +37,18 @@ export default function LoginPage() {
     router.push('/dashboard');
   }
 
-  const GOLD             = '#C9A227';
-  const GOLD_GLOW        = 'rgba(201,162,39,0.45)';
+  const GOLD             = 'var(--gold)';
+  const GOLD_GLOW        = 'rgba(var(--gold-rgb),0.45)';
   const INPUT_BG         = 'rgba(255,255,255,0.04)';
   const INPUT_BORDER     = 'rgba(255,255,255,0.09)';
-  const INPUT_FOCUS_BG   = 'rgba(201,162,39,0.04)';
-  const INPUT_FOCUS_BDR  = 'rgba(201,162,39,0.55)';
-  const INPUT_FOCUS_SHD  = '0 0 0 3px rgba(201,162,39,0.10)';
+  const INPUT_FOCUS_BG   = 'rgba(var(--gold-rgb),0.04)';
+  const INPUT_FOCUS_BDR  = 'rgba(var(--gold-rgb),0.55)';
+  const INPUT_FOCUS_SHD  = '0 0 0 3px rgba(var(--gold-rgb),0.10)';
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(ellipse 80% 60% at 70% -10%, rgba(201,162,39,0.09) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at -10% 100%, rgba(201,162,39,0.05) 0%, transparent 60%), #060608',
+      background: 'radial-gradient(ellipse 80% 60% at 70% -10%, rgba(var(--gold-rgb),0.09) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at -10% 100%, rgba(var(--gold-rgb),0.05) 0%, transparent 60%), #060608',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -66,7 +67,7 @@ export default function LoginPage() {
         padding: '44px 36px 36px',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 0 0 1px rgba(201,162,39,0.08) inset, 0 0 80px rgba(0,0,0,0.6), 0 32px 64px rgba(0,0,0,0.4)',
+        boxShadow: '0 0 0 1px rgba(var(--gold-rgb),0.08) inset, 0 0 80px rgba(0,0,0,0.6), 0 32px 64px rgba(0,0,0,0.4)',
         position: 'relative',
         overflow: 'hidden',
         animation: 'slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both',
@@ -82,23 +83,31 @@ export default function LoginPage() {
         <div style={{
           position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
           width: 220, height: 220,
-          background: 'radial-gradient(circle, rgba(201,162,39,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(var(--gold-rgb),0.06) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
 
         {/* ── Logo ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 40 }}>
           <div style={{
-            width: 72, height: 72, borderRadius: 18, overflow: 'hidden', position: 'relative',
-            boxShadow: '0 0 0 1px rgba(201,162,39,0.22), 0 0 24px 6px rgba(201,162,39,0.28), 0 0 60px 12px rgba(201,162,39,0.10)',
+            width: 77, height: 77, borderRadius: 18, overflow: 'hidden', position: 'relative',
+            boxShadow: BRAND_LOGO_URL
+              ? '0 16px 26px -10px rgba(0,0,0,0.65)'
+              : '0 0 0 1px rgba(var(--gold-rgb),0.22), 0 0 24px 6px rgba(var(--gold-rgb),0.28), 0 0 60px 12px rgba(var(--gold-rgb),0.10)',
           }}>
-            <Image src="/logo-mp.png" alt="Mp." fill style={{ objectFit: 'cover' }} sizes="72px" priority />
+            <Image src={BRAND_LOGO_URL || '/logo-mp.png'} alt={BRAND_NAME ?? 'Mp.'} fill style={{ objectFit: 'cover' }} sizes="90px" priority />
           </div>
 
           <div style={{ textAlign: 'center', lineHeight: 1 }}>
-            <div style={{ fontFamily: "'Comfortaa', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: '-0.2px', color: '#fff' }}>
-              Mp. <span style={{ color: GOLD }}>CRM</span>
-            </div>
+            {BRAND_NAME ? (
+              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 20, letterSpacing: '-0.2px', color: '#fff' }}>
+                {BRAND_NAME}
+              </div>
+            ) : (
+              <div style={{ fontFamily: "'Comfortaa', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: '-0.2px', color: '#fff' }}>
+                Mp. <span style={{ color: GOLD }}>CRM</span>
+              </div>
+            )}
             <div style={{
               fontFamily: "'Comfortaa', sans-serif", fontWeight: 300, fontSize: 10.5,
               color: 'rgba(255,255,255,0.28)', letterSpacing: '2.5px', textTransform: 'uppercase', marginTop: 7,
@@ -115,7 +124,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 14 }}>
             <label style={{
               display: 'block', fontWeight: 500, fontSize: 11,
-              color: focusEmail ? 'rgba(201,162,39,0.85)' : 'rgba(255,255,255,0.35)',
+              color: focusEmail ? 'rgba(var(--gold-rgb),0.85)' : 'rgba(255,255,255,0.35)',
               letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8,
               transition: 'color 0.2s', fontFamily: "'Inter', sans-serif",
             }}>E-mail</label>
@@ -149,7 +158,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 24 }}>
             <label style={{
               display: 'block', fontWeight: 500, fontSize: 11,
-              color: focusSenha ? 'rgba(201,162,39,0.85)' : 'rgba(255,255,255,0.35)',
+              color: focusSenha ? 'rgba(var(--gold-rgb),0.85)' : 'rgba(255,255,255,0.35)',
               letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8,
               transition: 'color 0.2s', fontFamily: "'Inter', sans-serif",
             }}>Senha</label>
@@ -223,27 +232,27 @@ export default function LoginPage() {
             onMouseEnter={() => {
               if (!loading && btnRef.current) {
                 btnRef.current.style.transform = 'translateY(-1px)';
-                btnRef.current.style.boxShadow = '0 8px 32px rgba(201,162,39,0.45), 0 1px 0 rgba(255,255,255,0.18) inset';
+                btnRef.current.style.boxShadow = '0 8px 32px rgba(var(--gold-rgb),0.45), 0 1px 0 rgba(255,255,255,0.18) inset';
               }
             }}
             onMouseLeave={() => {
               if (btnRef.current) {
                 btnRef.current.style.transform = 'translateY(0)';
-                btnRef.current.style.boxShadow = '0 4px 20px rgba(201,162,39,0.28), 0 1px 0 rgba(255,255,255,0.12) inset';
+                btnRef.current.style.boxShadow = '0 4px 20px rgba(var(--gold-rgb),0.28), 0 1px 0 rgba(255,255,255,0.12) inset';
               }
             }}
             style={{
               width: '100%', padding: '14px',
               background: loading
-                ? 'rgba(201,162,39,0.35)'
-                : 'linear-gradient(135deg, #B8901F 0%, #DDB035 40%, #E8BB3A 60%, #C9A227 100%)',
+                ? 'rgba(var(--gold-rgb),0.35)'
+                : 'linear-gradient(135deg, var(--gold3) 0%, var(--gold) 55%, var(--gold2) 100%)',
               border: 'none', borderRadius: 12,
               color: loading ? 'rgba(0,0,0,0.45)' : '#07050A',
               fontSize: 13.5, fontWeight: 700,
               fontFamily: "'Comfortaa', sans-serif", letterSpacing: '0.3px',
               cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'transform 0.18s, box-shadow 0.18s',
-              boxShadow: loading ? 'none' : '0 4px 20px rgba(201,162,39,0.28), 0 1px 0 rgba(255,255,255,0.12) inset',
+              boxShadow: loading ? 'none' : '0 4px 20px rgba(var(--gold-rgb),0.28), 0 1px 0 rgba(255,255,255,0.12) inset',
               position: 'relative', overflow: 'hidden',
             }}
           >

@@ -161,7 +161,7 @@ function CRMInner({ children }: { children: React.ReactNode }) {
             disabled={retrying}
             style={{
               width: '100%', padding: '11px',
-              background: retrying ? 'rgba(201,162,39,0.3)' : 'var(--gold, #C9A227)',
+              background: retrying ? 'rgba(var(--gold-rgb),0.3)' : 'var(--gold)',
               border: 'none', borderRadius: 8,
               color: '#080808', fontSize: 13, fontWeight: 700,
               cursor: retrying ? 'not-allowed' : 'pointer',

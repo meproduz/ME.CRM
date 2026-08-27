@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
-import { KANBAN_COLS, VAL, ORIG_COLORS, ICP_BADGE, type Lead, type LeadStatus } from '@/types';
+import { fmtR, isStale, diasAtras, ultimoContato, fmtFollowup, parseFollowup, leadData, leadHora, getLeadValor } from '@/lib/utils';
+import { KANBAN_COLS, VAL, ORIG_COLORS, ICP_BADGE, MOTIVOS_PERDA, type Lead, type LeadStatus } from '@/types';
 import LeadPanel from '@/components/LeadPanel';
 import NovoLeadModal from '@/components/NovoLeadModal';
 
@@ -164,9 +164,7 @@ export default function PipelinePage() {
               <div className="mf"><label>Motivo</label>
                 <select value={perdaMotivo} onChange={(e) => setPerdaMotivo(e.target.value)}>
                   <option value="">Selecione</option>
-                  <option>Sem orçamento</option><option>Escolheu concorrente</option>
-                  <option>Não respondeu</option><option>Proposta rejeitada</option>
-                  <option>Timing ruim</option><option>Problema interno</option><option>Outro</option>
+                  {MOTIVOS_PERDA.map((m) => <option key={m}>{m}</option>)}
                 </select>
               </div>
               <div className="mf"><label>Observação (opcional)</label>
@@ -194,9 +192,10 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
   const valor = getLeadValor(lead);
   const origColor = ORIG_COLORS[lead.orig ?? ''] ?? '#555';
   const isClosed = lead.status === 'fechado';
-  const fuNow = lead.followup && new Date(lead.followup + 'T00:00:00') <= new Date();
+  const fuNow = lead.followup && parseFollowup(lead.followup) <= new Date();
   const fuOk = lead.followup && !fuNow;
   const diasP = stale ? diasAtras(ultimoContato(lead.hist, ld, lead.lastContact)) : 0;
+  const semProximaAcao = !lead.followup && lead.status !== 'fechado' && lead.status !== 'perdido';
 
   return (
     <motion.div
@@ -218,7 +217,8 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
       )}
 
       {fuNow && <div className="fu-badge fu-late">📅 FU vencido</div>}
-      {fuOk && <div className="fu-badge fu-ok">📅 {fmtData(lead.followup)}</div>}
+      {fuOk && <div className="fu-badge fu-ok">📅 {fmtFollowup(lead.followup)}</div>}
+      {semProximaAcao && <div className="fu-badge fu-late">⚠️ Sem próxima ação</div>}
 
       {valor > 0 && <div className="card-valor">{fmtR(valor)}</div>}
 
@@ -231,13 +231,14 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
 
       {/* Badge ICP */}
       {lead.icp_label && (
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: 6, overflow: 'hidden' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             padding: '2px 8px', borderRadius: 100,
             background: ICP_BADGE[lead.icp_label]?.bg ?? 'rgba(100,100,100,0.1)',
             color: ICP_BADGE[lead.icp_label]?.color ?? '#888',
             fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
+            whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             {ICP_BADGE[lead.icp_label]?.icon} {lead.icp_label}
             {lead.icp_score != null ? ` · ${lead.icp_score}` : ''}

@@ -49,7 +49,7 @@ export default function RelatoriosPage() {
   ];
 
   const maxFunnel = Math.max(...KANBAN_COLS.map((c) => fl.filter((l) => l.status === c.id).length), 1);
-  const funnelColors = ['#C9A227', '#3B82F6', '#8B5CF6', '#F97316', '#22C55E', '#E24B4A'];
+  const funnelColors = KANBAN_COLS.map((c) => c.color);
   const totalOr = fl.length || 1;
 
   return (

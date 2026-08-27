@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, isStale, fmtData, ultimoContato, leadData, getLeadValor } from '@/lib/utils';
+import { fmtR, diasAtras, isStale, fmtFollowup, parseFollowup, ultimoContato, leadData, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, ORIGENS, ORIG_COLORS, VAL } from '@/types';
 
 function parseLeadDate(data: string): Date | null {
@@ -58,11 +58,6 @@ function Clock() {
   );
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  novo: 'Novo', contato: 'Em contato', proposta: 'Proposta',
-  negociacao: 'Negociação', fechado: 'Fechado', perdido: 'Perdido',
-};
-
 export default function DashboardPage() {
   const { state, dispatch } = useCRM();
   const router = useRouter();
@@ -114,18 +109,18 @@ export default function DashboardPage() {
       .sort((a, b) => diasAtras(ultimoContato(b.hist, leadData(b), b.lastContact)) - diasAtras(ultimoContato(a.hist, leadData(a), a.lastContact)));
     const fuVenc = leads.filter((l) => {
       if (!l.followup || l.status === 'fechado' || l.status === 'perdido') return false;
-      return new Date(l.followup + 'T00:00:00') <= new Date();
+      return parseFollowup(l.followup) <= new Date();
     }).filter((l) => !novos.includes(l) && !parados.includes(l));
     return { novos, parados, fuVenc };
   }, [leads]);
 
   // ── Próximos follow-ups (estado vazio dos urgentes) ───────────────────────
   const proximosFu = useMemo(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const now = new Date();
     return leads
       .filter(l => l.followup && l.status !== 'fechado' && l.status !== 'perdido')
-      .filter(l => new Date(l.followup! + 'T00:00:00') > today)
-      .sort((a, b) => new Date(a.followup! + 'T00:00:00').getTime() - new Date(b.followup! + 'T00:00:00').getTime())
+      .filter(l => parseFollowup(l.followup!) > now)
+      .sort((a, b) => parseFollowup(a.followup!).getTime() - parseFollowup(b.followup!).getTime())
       .slice(0, 5);
   }, [leads]);
 
@@ -150,7 +145,7 @@ export default function DashboardPage() {
   }
 
   // Funil
-  const funnelColors = ['#C9A227', '#3B82F6', '#8B5CF6', '#F97316', '#22C55E', '#E24B4A'];
+  const funnelColors = KANBAN_COLS.map((c) => c.color);
   const maxFunnel = Math.max(...KANBAN_COLS.map((c) => leads.filter((l) => l.status === c.id).length), 1);
   const hasAnyFunnelData = KANBAN_COLS.some(c => leads.filter(l => l.status === c.id).length > 0);
 
@@ -182,7 +177,7 @@ export default function DashboardPage() {
 
       {/* Container de scroll: separa overflow do layout flex */}
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-      <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ══ HERO ══ */}
         <div className="dash-hero">
@@ -203,31 +198,27 @@ export default function DashboardPage() {
           {([
             {
               label: 'Receita do mês', value: fmtR(stats.mrr), sub: `${stats.fechados.length} fechados`,
-              trend: stats.trends.mrr,
-              accent: '#C9A227', bg: 'linear-gradient(145deg,rgba(201,162,39,0.15) 0%,rgba(201,162,39,0.04) 100%)', border: 'rgba(201,162,39,0.22)',
+              trend: stats.trends.mrr, accent: 'var(--gold)',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5"/><path d="M9 4.5V6M9 12v1.5M6.5 7.5H10a1 1 0 0 1 0 3H8a1 1 0 0 0 0 2h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>),
             },
             {
               label: 'Em negociação', value: fmtR(stats.pipe), sub: `${stats.abertos.length} oportunidades`,
-              trend: stats.trends.pipe,
-              accent: '#3B82F6', bg: 'linear-gradient(145deg,rgba(59,130,246,0.15) 0%,rgba(59,130,246,0.04) 100%)', border: 'rgba(59,130,246,0.22)',
+              trend: stats.trends.pipe, accent: '#3B82F6',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 12.5l4-4 3 3 5.5-5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M13 6h2v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>),
             },
             {
               label: 'Total de leads', value: String(leads.length), sub: 'cadastrados',
-              trend: stats.trends.leads,
-              accent: '#8B5CF6', bg: 'linear-gradient(145deg,rgba(139,92,246,0.15) 0%,rgba(139,92,246,0.04) 100%)', border: 'rgba(139,92,246,0.22)',
+              trend: stats.trends.leads, accent: '#8B5CF6',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="7" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M2 15c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="13.5" cy="6" r="2" stroke="currentColor" strokeWidth="1.5"/><path d="M16 15c0-2-1.2-3.6-2.5-4.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
             },
             {
               label: 'Taxa de conversão', value: `${stats.conv}%`, sub: `${stats.fechados.length} de ${leads.length} leads`,
-              trend: stats.trends.conv,
-              accent: '#22C55E', bg: 'linear-gradient(145deg,rgba(34,197,94,0.15) 0%,rgba(34,197,94,0.04) 100%)', border: 'rgba(34,197,94,0.22)',
+              trend: stats.trends.conv, accent: '#22C55E',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="6" cy="6" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M5 13L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
             },
           ] as const).map((k, i) => (
-            <div key={i} className="kpi-v2-card" style={{ background: k.bg, borderColor: k.border }}>
-              <div className="kpi-v2-icon" style={{ color: k.accent, background: `${k.accent}25`, borderColor: `${k.accent}35` }}>
+            <div key={i} className="kpi-v2-card">
+              <div className="kpi-v2-icon" style={{ color: k.accent }}>
                 {k.icon}
               </div>
               <div className="kpi-v2-label">{k.label}</div>
@@ -253,8 +244,8 @@ export default function DashboardPage() {
             {metaMensal === 0 ? (
               <div className="meta-zero-state">
                 <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                  <circle cx="18" cy="18" r="14" stroke="rgba(201,162,39,0.3)" strokeWidth="1.5" strokeDasharray="5 3"/>
-                  <path d="M18 11v8M18 22v3" stroke="rgba(201,162,39,0.7)" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="18" cy="18" r="14" stroke="rgba(var(--gold-rgb),0.3)" strokeWidth="1.5" strokeDasharray="5 3"/>
+                  <path d="M18 11v8M18 22v3" stroke="rgba(var(--gold-rgb),0.7)" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
                 <p className="meta-zero-title">Meta não configurada</p>
                 <p className="meta-zero-sub">Defina uma meta mensal para acompanhar o desempenho da equipe</p>
@@ -269,19 +260,19 @@ export default function DashboardPage() {
                     {/* Trilha de fundo — mais visível */}
                     <circle cx={arcCx} cy={arcCy} r={R} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth={sw}/>
                     {stats.pct > 0 && (
-                      <circle cx={arcCx} cy={arcCy} r={R} fill="none" stroke="#C9A227" strokeWidth={sw}
+                      <circle cx={arcCx} cy={arcCy} r={R} fill="none" stroke="var(--gold)" strokeWidth={sw}
                         strokeDasharray={`${arcDash} ${arcCirc}`} strokeLinecap="round"
                         transform={`rotate(-90 ${arcCx} ${arcCy})`}
-                        style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 6px rgba(201,162,39,0.4))' }}
+                        style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 6px rgba(var(--gold-rgb),0.4))' }}
                       />
                     )}
-                    <text x={arcCx} y={arcCy - 4} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="22" fontWeight="800" fill="#fff">{stats.pct}%</text>
+                    <text x={arcCx} y={arcCy - 4} textAnchor="middle" fontFamily="Sora,Inter,sans-serif" fontSize="22" fontWeight="700" fill="#fff">{stats.pct}%</text>
                     <text x={arcCx} y={arcCy + 14} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="9" fill="#555" fontWeight="400">atingido</text>
                   </svg>
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {[
-                    { label: 'Receita fechada',  val: fmtR(stats.mrr),   pct: Math.min(stats.pct, 100),   color: '#C9A227' },
+                    { label: 'Receita fechada',  val: fmtR(stats.mrr),   pct: Math.min(stats.pct, 100),   color: 'var(--gold)' },
                     { label: 'Em negociação',    val: fmtR(stats.pipe),  pct: stats.pipePct,               color: '#3B82F6' },
                     { label: 'Faltam para meta', val: fmtR(stats.falta), pct: Math.min(Math.round((stats.falta / metaMensal) * 100), 100), color: '#F04747' },
                   ].map((b) => (
@@ -297,7 +288,7 @@ export default function DashboardPage() {
                   ))}
                   <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text3)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Meta mensal</span>
-                    <span style={{ color: '#C9A227', fontWeight: 700 }}>{fmtR(metaMensal)}</span>
+                    <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{fmtR(metaMensal)}</span>
                   </div>
                 </div>
               </div>
@@ -325,7 +316,7 @@ export default function DashboardPage() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="urg-name">{l.nome}</div>
-                          <div className="urg-info">📅 FU em {fmtData(l.followup)}{valor ? ` · ${fmtR(valor)}` : ''}</div>
+                          <div className="urg-info">📅 FU em {fmtFollowup(l.followup)}{valor ? ` · ${fmtR(valor)}` : ''}</div>
                         </div>
                         {l.tel && (
                           <button className="urg-wa" onClick={(e) => {
@@ -351,7 +342,7 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 12, flex: 1, overflowY: 'auto' }}>
                 {urgAll.map((l) => {
                   const isRed = parados.includes(l), isFu = fuVenc.includes(l);
-                  const color = isFu ? '#F97316' : isRed ? '#F04747' : '#C9A227';
+                  const color = isFu ? '#F97316' : isRed ? '#F04747' : 'var(--gold)';
                   const valor = getLeadValor(l);
                   const dias  = diasAtras(ultimoContato(l.hist, leadData(l), l.lastContact));
                   const waMsg = encodeURIComponent(waTemplate.replace('{nome}', l.nome));
@@ -364,7 +355,7 @@ export default function DashboardPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="urg-name">{l.nome}</div>
                         <div className="urg-info">
-                          {isFu ? `FU vencido · ${fmtData(l.followup)}` : isRed ? `${dias}d sem contato` : 'Novo lead'}
+                          {isFu ? `FU vencido · ${fmtFollowup(l.followup)}` : isRed ? `${dias}d sem contato` : 'Novo lead'}
                           {valor ? ` · ${fmtR(valor)}` : ''}
                         </div>
                       </div>
@@ -404,7 +395,7 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                       {valor > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold2)' }}>{fmtR(valor)}</span>}
-                      <span className={`sp sp-${l.status}`}>{STATUS_LABEL[l.status]}</span>
+                      <span className={`sp sp-${l.status}`}>{col?.label ?? l.status}</span>
                     </div>
                     <div className="atv-data">{leadData(l)}</div>
                   </div>
@@ -449,24 +440,46 @@ export default function DashboardPage() {
           {/* Origens */}
           <div className="dash-chart-card">
             <div className="dash-section-title">Leads por origem</div>
-            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {ORIGENS.map((o) => {
-                const n   = leads.filter((l) => l.orig === o).length;
-                const pct = leads.length ? Math.round((n / leads.length) * 100) : 0;
-                const color = ORIG_COLORS[o] ?? '#555';
+            {(() => {
+              const comLeads = ORIGENS
+                .map((o) => ({ o, n: leads.filter((l) => l.orig === o).length }))
+                .filter((r) => r.n > 0)
+                .sort((a, b) => b.n - a.n);
+
+              if (comLeads.length === 0) {
                 return (
-                  <div key={o} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, boxShadow: n > 0 ? `0 0 5px ${color}88` : 'none' }} />
-                    <div style={{ flex: 1, fontSize: 10, color: n > 0 ? 'var(--text2)' : 'var(--text3)' }}>{o}</div>
-                    <div style={{ fontSize: 11, fontWeight: 700, width: 22, textAlign: 'right', color: n > 0 ? 'var(--text)' : 'var(--text3)' }}>{n}</div>
-                    <div style={{ width: 70, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2, transition: 'width 0.8s ease' }} />
-                    </div>
-                    <div style={{ fontSize: 9, color: 'var(--text3)', width: 28, textAlign: 'right' }}>{pct}%</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 0', color: 'var(--text3)', fontSize: 12, fontStyle: 'italic' }}>
+                    Nenhum dado disponível ainda
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 13 }}>
+                  {comLeads.map(({ o, n }) => {
+                    const pct = leads.length ? Math.round((n / leads.length) * 100) : 0;
+                    const color = ORIG_COLORS[o] ?? '#555';
+                    return (
+                      <div key={o}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0, boxShadow: `0 0 6px ${color}88` }} />
+                            <span style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                            <span style={{ fontSize: 10, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>· {pct}%</span>
+                          </div>
+                        </div>
+                        <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.8s ease' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
         </div>

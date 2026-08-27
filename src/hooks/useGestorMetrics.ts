@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { useCRM } from '@/store/crm-store';
 import type { Lead } from '@/types';
 import { VAL } from '@/types';
@@ -18,12 +19,12 @@ export const LABEL_ETAPA: Record<string, string> = {
 };
 
 export const COR_ETAPA: Record<string, string> = {
-  novo: '#C9A227', contato: '#3B82F6', proposta: '#8B5CF6',
+  novo: 'var(--gold)', contato: '#3B82F6', proposta: '#8B5CF6',
   negociacao: '#F97316', fechado: '#22C55E', perdido: '#EF4444',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-import { getLeadValor } from '@/lib/utils';
+import { getLeadValor, parseFollowup, precisaReativar } from '@/lib/utils';
 export { getLeadValor } from '@/lib/utils';
 
 function mesAno(date: Date): string {
@@ -103,10 +104,14 @@ export interface GestorMetrics {
   historicMensal: MesMetric[];
   motivosPerdas: { motivo: string; count: number; pct: number }[];
   origROI: OrigemMetric[];
+  porUsuario: OrigemMetric[];
   qualidade: QualidadeMetric[];
   alertasParados: AlertaLead[];
   alertasFollowup: AlertaFollowup[];
   alertasSemMotivo: number;
+  clientesReativar: number;
+  tempoMedioRespostaMin: number | null;
+  leadsSemPrimeiraResposta: number;
   leadsByMotivo: Record<string, MotivoLead[]>;
   totalLeads: number;
   loading: boolean;
@@ -120,8 +125,9 @@ const EMPTY: GestorMetrics = {
   forecast: 0, forecastComFechados: 0, metaMensal: 0, probBaterMeta: 0,
   tempoMedioHoras: null,
   etapas: [], historicMensal: [], motivosPerdas: [],
-  origROI: [], qualidade: [],
+  origROI: [], porUsuario: [], qualidade: [],
   alertasParados: [], alertasFollowup: [], alertasSemMotivo: 0,
+  clientesReativar: 0, tempoMedioRespostaMin: null, leadsSemPrimeiraResposta: 0,
   leadsByMotivo: {},
   totalLeads: 0, loading: true, error: null,
 };
@@ -174,12 +180,13 @@ export function useGestorMetrics(): GestorMetrics {
       // 3. Status changes estruturados (tipo='status_change') — para tempo por etapa e datas reais de fechamento
       let statusChanges: { lead_id: string; meta_json: unknown; created_at: string }[] = [];
       if (allIds.length > 0) {
-        const { data: sc } = await supabase
+        const { data: sc, error: scError } = await supabase
           .from('leads_historico')
           .select('lead_id, meta_json, created_at')
           .eq('tipo', 'status_change')
           .in('lead_id', allIds)
           .order('created_at', { ascending: true });
+        if (scError) logger.exception('gestor.status_changes_query_error', scError);
         statusChanges = sc ?? [];
       }
 
@@ -432,6 +439,30 @@ function buildMetrics(
       };
     });
 
+  // ── Cadastros por usuário (quem registrou cada lead) ──────────────────────────
+  // criado_por_nome requer migration (ver supabase-migration-lixeira-autoria.sql);
+  // enquanto não aplicada, tudo cai em "Sem registro".
+  const usuarioMap: Record<string, Lead[]> = {};
+  all.forEach(l => {
+    const u = l.criado_por_nome?.trim() || 'Sem registro (antes do controle de autoria)';
+    if (!usuarioMap[u]) usuarioMap[u] = [];
+    usuarioMap[u].push(l);
+  });
+  const porUsuario: OrigemMetric[] = Object.entries(usuarioMap)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([nome, ls]) => {
+      const fechs = ls.filter(l => l.status === 'fechado');
+      const receita = fechs.reduce((s, l) => s + getLeadValor(l), 0);
+      return {
+        orig: nome,
+        leads: ls.length,
+        fechados: fechs.length,
+        conversao: Math.round((fechs.length / (ls.length || 1)) * 100),
+        ticketMedio: fechs.length > 0 ? Math.round(receita / fechs.length) : 0,
+        receita,
+      };
+    });
+
   // ── Qualidade de dados ────────────────────────────────────────────────────────
   const campos: { campo: keyof Lead; label: string }[] = [
     { campo: 'nome',  label: 'Nome' },
@@ -469,9 +500,8 @@ function buildMetrics(
   const alertasFollowup: AlertaFollowup[] = all
     .filter(l => l.followup && l.status !== 'fechado' && l.status !== 'perdido')
     .map(l => {
-      const parts = (l.followup ?? '').split('/').map(Number);
-      const fuDate = parts.length >= 3 ? new Date(parts[2], parts[1] - 1, parts[0]) : null;
-      const diasAtraso = fuDate ? Math.floor((hoje.getTime() - fuDate.getTime()) / 86_400_000) : 0;
+      const fuDate = parseFollowup(l.followup!);
+      const diasAtraso = Math.floor((hoje.getTime() - fuDate.getTime()) / 86_400_000);
       return { id: l.id, nome: l.nome, followup: l.followup ?? '', diasAtraso };
     })
     .filter(a => a.diasAtraso > 0)
@@ -481,6 +511,37 @@ function buildMetrics(
   const alertasSemMotivo = all.filter(l =>
     l.status === 'perdido' && !l.motivo_perda &&
     !motivosHistorico.some(h => h.lead_id === l.id)
+  ).length;
+
+  // ── Clientes pra reativar ─────────────────────────────────────────────────────
+  const clientesReativar = all.filter(l => l.status === 'fechado' && precisaReativar(l)).length;
+
+  // ── Tempo de primeira resposta ────────────────────────────────────────────────
+  // Do cadastro do lead até o primeiro movimento pra "contato" — mede a velocidade
+  // real de atendimento, não só a intenção de contatar.
+  const primeiroContatoMap: Record<string, Date> = {};
+  statusChanges.forEach(sc => {
+    const meta = sc.meta_json as { to?: string; at?: string } | null;
+    if (meta?.to === 'contato' && meta?.at) {
+      const d = new Date(meta.at);
+      if (!primeiroContatoMap[sc.lead_id] || d < primeiroContatoMap[sc.lead_id]) {
+        primeiroContatoMap[sc.lead_id] = d;
+      }
+    }
+  });
+  const temposPrimeiraResposta = Object.entries(primeiroContatoMap)
+    .map(([leadId, dataContato]) => {
+      const lead = all.find(l => l.id === leadId);
+      if (!lead) return null;
+      const minutos = (dataContato.getTime() - new Date(lead.created_at).getTime()) / 60_000;
+      return minutos >= 0 ? minutos : null;
+    })
+    .filter((v): v is number => v !== null);
+  const tempoMedioRespostaMin = temposPrimeiraResposta.length > 0
+    ? Math.round(temposPrimeiraResposta.reduce((s, v) => s + v, 0) / temposPrimeiraResposta.length)
+    : null;
+  const leadsSemPrimeiraResposta = all.filter(l =>
+    l.status !== 'perdido' && !primeiroContatoMap[l.id]
   ).length;
 
   return {
@@ -501,10 +562,14 @@ function buildMetrics(
     historicMensal,
     motivosPerdas,
     origROI,
+    porUsuario,
     qualidade,
     alertasParados,
     alertasFollowup,
     alertasSemMotivo,
+    clientesReativar,
+    tempoMedioRespostaMin,
+    leadsSemPrimeiraResposta,
     leadsByMotivo,
     totalLeads: all.length,
     loading: false,

@@ -20,7 +20,7 @@ function getAcoesResgate(motivo: string): AcaoResgate[] {
   // Preço / Valor / Custo
   if (/preço|preco|caro|valor|custo|orçamento|orcamento|barato|invest/.test(m)) return [
     {
-      icon: '💰', label: 'Condição especial', cor: '#C9A227',
+      icon: '💰', label: 'Condição especial', cor: 'var(--gold)',
       desc: 'Ofereça um desconto ou bônus pontual com urgência',
       template: 'Olá {nome}! Tenho uma condição especial disponível essa semana que acho que vai fazer mais sentido pra você. Posso te apresentar rapidinho?',
     },
@@ -49,7 +49,7 @@ function getAcoesResgate(motivo: string): AcaoResgate[] {
       template: 'Olá {nome}! Pensei em você ao ver isso e queria compartilhar — pode ser relevante pro seu momento atual. Abraço!',
     },
     {
-      icon: '🎯', label: 'Nova proposta em 60d', cor: '#C9A227',
+      icon: '🎯', label: 'Nova proposta em 60d', cor: 'var(--gold)',
       desc: 'Reaborde com ângulo diferente após 60 dias',
       template: 'Olá {nome}! Faz um tempo desde nosso último papo. Temos novidades que podem se encaixar melhor na sua realidade agora. Posso apresentar?',
     },
@@ -58,7 +58,7 @@ function getAcoesResgate(motivo: string): AcaoResgate[] {
   // Concorrência / Já tem / Outro fornecedor
   if (/concorrên|concorren|outro|fornecedor|já tem|ja tem|contrat|parceiro/.test(m)) return [
     {
-      icon: '🏆', label: 'Apresentar diferencial', cor: '#C9A227',
+      icon: '🏆', label: 'Apresentar diferencial', cor: 'var(--gold)',
       desc: 'Destaque o que a MP faz que o concorrente não faz',
       template: 'Olá {nome}! Entendo que você escolheu outro caminho. Temos clientes que também vieram de outras agências e adoram comparar os resultados. Posso te mostrar a diferença?',
     },
@@ -106,7 +106,7 @@ function getAcoesResgate(motivo: string): AcaoResgate[] {
       template: 'Olá {nome}! Tudo bem por aí? Passando rapidinho só pra dar um oi! 😊',
     },
     {
-      icon: '🎁', label: 'Oferta surpresa', cor: '#C9A227',
+      icon: '🎁', label: 'Oferta surpresa', cor: 'var(--gold)',
       desc: 'Ofereça algo grátis (diagnóstico, consultoria) como gancho',
       template: 'Olá {nome}! Estou oferecendo um diagnóstico gratuito do marketing digital essa semana pra alguns contatos selecionados. Topa?',
     },
@@ -120,7 +120,7 @@ function getAcoesResgate(motivo: string): AcaoResgate[] {
       template: 'Olá {nome}! Passando pra dar um oi e ver se surgiu alguma novidade por aí. Se precisar de algo, estou à disposição!',
     },
     {
-      icon: '🎯', label: 'Nova proposta', cor: '#C9A227',
+      icon: '🎯', label: 'Nova proposta', cor: 'var(--gold)',
       desc: 'Reaborde com proposta atualizada e diferente',
       template: 'Olá {nome}! Temos algumas novidades desde nosso último papo. Vale 10 minutos pra eu te mostrar?',
     },
@@ -137,6 +137,14 @@ function fmtR(v: number) {
   if (v >= 1_000_000) return `R$${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `R$${(v / 1_000).toFixed(1)}k`;
   return `R$${v.toLocaleString('pt-BR')}`;
+}
+
+function fmtDuracao(min: number | null): string {
+  if (min == null) return '—';
+  if (min < 60) return `${min} min`;
+  const horas = min / 60;
+  if (horas < 24) return `${horas.toFixed(1)}h`;
+  return `${(horas / 24).toFixed(1)}d`;
 }
 
 function TrendBadge({ pct }: { pct: number }) {
@@ -178,7 +186,7 @@ export default function GestorPage() {
 
   if (m.loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 16 }}>
-      <div style={{ width: 32, height: 32, border: '2px solid rgba(201,162,39,0.2)', borderTop: '2px solid var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 32, height: 32, border: '2px solid rgba(var(--gold-rgb),0.2)', borderTop: '2px solid var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <span style={{ color: 'var(--text3)', fontSize: 13 }}>Calculando métricas…</span>
       <style>{`@keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }`}</style>
     </div>
@@ -210,38 +218,44 @@ export default function GestorPage() {
 
       {/* ── Scroll container ── */}
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-      <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ══ KPI CARDS ══ */}
         <div className="kpi-v2-grid">
           {([
             {
               label: 'Leads no mês', value: String(m.leadsNoMes), sub: 'novos leads captados',
-              trend: m.trendLeads,
-              accent: '#C9A227', bg: 'linear-gradient(145deg,rgba(201,162,39,0.15) 0%,rgba(201,162,39,0.04) 100%)', border: 'rgba(201,162,39,0.22)',
+              trend: m.trendLeads, accent: 'var(--gold)',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5h14M2 9h9M2 13h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>),
             },
             {
               label: 'Fechados no mês', value: String(m.fechadosNoMes), sub: `ticket médio ${fmtR(m.ticketMedio)}`,
-              trend: m.trendFechados,
-              accent: '#22C55E', bg: 'linear-gradient(145deg,rgba(34,197,94,0.15) 0%,rgba(34,197,94,0.04) 100%)', border: 'rgba(34,197,94,0.22)',
+              trend: m.trendFechados, accent: '#22C55E',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9l4 4 8-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
             },
             {
               label: 'Receita no mês', value: fmtR(m.receitaNoMes), sub: 'contratos fechados',
-              trend: m.trendReceita,
-              accent: '#3B82F6', bg: 'linear-gradient(145deg,rgba(59,130,246,0.15) 0%,rgba(59,130,246,0.04) 100%)', border: 'rgba(59,130,246,0.22)',
+              trend: m.trendReceita, accent: '#3B82F6',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5"/><path d="M9 4.5V6M9 12v1.5M6.5 7.5H10a1 1 0 0 1 0 3H8a1 1 0 0 0 0 2h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>),
             },
             {
               label: 'Taxa de conversão', value: `${m.taxaConversao}%`, sub: 'leads → fechados',
-              trend: 0,
-              accent: '#8B5CF6', bg: 'linear-gradient(145deg,rgba(139,92,246,0.15) 0%,rgba(139,92,246,0.04) 100%)', border: 'rgba(139,92,246,0.22)',
+              trend: 0, accent: '#8B5CF6',
               icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="6" cy="6" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M5 13L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
             },
+            {
+              label: 'Tempo de 1ª resposta', value: fmtDuracao(m.tempoMedioRespostaMin), sub: m.leadsSemPrimeiraResposta > 0 ? `${m.leadsSemPrimeiraResposta} sem 1º contato ainda` : 'do cadastro até o 1º contato',
+              trend: 0, accent: '#EAB308',
+              icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5"/><path d="M9 5v4l3 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+            },
+            {
+              label: 'Clientes p/ reativar', value: String(m.clientesReativar), sub: 'sem atividade há 6+ meses',
+              trend: 0, accent: '#10B981',
+              icon: (<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a7 7 0 100 14A7 7 0 009 2z" stroke="currentColor" strokeWidth="1.5"/><path d="M9 6v3l2 1.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>),
+            },
           ] as const).map((k, i) => (
-            <div key={i} className="kpi-v2-card" style={{ background: k.bg, borderColor: k.border }}>
-              <div className="kpi-v2-icon" style={{ color: k.accent, background: `${k.accent}25`, borderColor: `${k.accent}35` }}>
+            <div key={i} className="kpi-v2-card">
+              <div className="kpi-v2-icon" style={{ color: k.accent }}>
                 {k.icon}
               </div>
               <div className="kpi-v2-label">{k.label}</div>
@@ -275,7 +289,7 @@ export default function GestorPage() {
           });
 
           return (
-            <div className="dash-meta" style={{ background: 'linear-gradient(145deg,rgba(201,162,39,0.06) 0%,rgba(201,162,39,0.01) 100%)', border: '1px solid rgba(201,162,39,0.13)' }}>
+            <div className="dash-meta">
               <div className="dash-section-title">Meta do Mês
                 <span style={{ fontWeight: 400, color: 'var(--text3)', fontSize: 10 }}>&nbsp;· {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
               </div>
@@ -298,7 +312,7 @@ export default function GestorPage() {
 
                   {/* Outer ambient glow ring */}
                   <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
-                    fill="none" stroke="rgba(201,162,39,0.06)" strokeWidth={swg+14} strokeLinecap="round"/>
+                    fill="none" stroke="rgba(var(--gold-rgb),0.06)" strokeWidth={swg+14} strokeLinecap="round"/>
 
                   {/* Background track */}
                   <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
@@ -352,8 +366,8 @@ export default function GestorPage() {
 
                   {/* Big percentage */}
                   <text x={cxg} y={cyg - 52} textAnchor="middle"
-                    fontSize={52} fontWeight={900} fill="#fff"
-                    fontFamily="Inter,system-ui,sans-serif" letterSpacing="-2">{pctMeta}%</text>
+                    fontSize={52} fontWeight={700} fill="#fff"
+                    fontFamily="Sora,Inter,sans-serif" letterSpacing="-2">{pctMeta}%</text>
                   <text x={cxg} y={cyg - 24} textAnchor="middle"
                     fontSize={9} fill="rgba(255,255,255,0.3)"
                     fontFamily="Inter,sans-serif" letterSpacing="2">DA META ATINGIDA</text>
@@ -363,7 +377,7 @@ export default function GestorPage() {
               {/* ── Stat bars ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
                 {[
-                  { label: 'Receita fechada',    val: fmtR(m.receitaNoMes),        pct: pctMeta,     color: '#C9A227' },
+                  { label: 'Receita fechada',    val: fmtR(m.receitaNoMes),        pct: pctMeta,     color: 'var(--gold)' },
                   { label: 'Forecast total',     val: fmtR(m.forecastComFechados), pct: pctForecast, color: '#3B82F6' },
                   { label: 'Faltam para a meta', val: fmtR(falta), pct: Math.min(Math.round((falta / m.metaMensal) * 100), 100), color: '#EF4444' },
                 ].map((b) => (
@@ -390,7 +404,7 @@ export default function GestorPage() {
         })()}
 
         {/* ══ FORECAST + FUNIL ══ */}
-        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
           {/* Forecast */}
           <div className="dash-meta">
@@ -460,7 +474,7 @@ export default function GestorPage() {
         </div>
 
         {/* ══ HISTÓRICO + MOTIVOS ══ */}
-        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
           {/* Histórico mensal */}
           <div className="dash-meta">
@@ -474,14 +488,14 @@ export default function GestorPage() {
                   return (
                     <div key={i} style={{
                       padding: '10px 12px', borderRadius: 10,
-                      background: isNow ? 'rgba(201,162,39,0.08)' : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${isNow ? 'rgba(201,162,39,0.2)' : 'rgba(255,255,255,0.05)'}`,
+                      background: isNow ? 'rgba(var(--gold-rgb),0.08)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${isNow ? 'rgba(var(--gold-rgb),0.2)' : 'rgba(255,255,255,0.05)'}`,
                     }}>
                       {/* Row top: month + receita */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 12, fontWeight: isNow ? 700 : 500, color: isNow ? 'var(--gold)' : 'var(--text2)' }}>{row.mes}</span>
-                          {isNow && <span style={{ fontSize: 8, fontWeight: 700, background: 'rgba(201,162,39,0.18)', color: 'var(--gold)', padding: '1px 6px', borderRadius: 20, letterSpacing: '0.5px' }}>ATUAL</span>}
+                          {isNow && <span style={{ fontSize: 8, fontWeight: 700, background: 'rgba(var(--gold-rgb),0.18)', color: 'var(--gold)', padding: '1px 6px', borderRadius: 20, letterSpacing: '0.5px' }}>ATUAL</span>}
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 800, color: row.receita > 0 ? 'var(--gold)' : 'var(--text3)' }}>{fmtR(row.receita)}</span>
                       </div>
@@ -552,18 +566,20 @@ export default function GestorPage() {
         </div>
 
         {/* ══ ROI POR ORIGEM + QUALIDADE ══ */}
-        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="gestor-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
           {/* ROI por origem */}
           <div className="dash-meta">
-            <div className="dash-section-title">ROI por Origem</div>
+            <div className="dash-section-title">ROI por Origem
+              <span style={{ fontSize: 9, fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>ROI real onde há investimento cadastrado, senão taxa de conversão</span>
+            </div>
             {m.origROI.length === 0 ? (
               <div style={{ color: 'var(--text3)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>Nenhum dado de origem registrado</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
                 {(() => {
                   const maxL = Math.max(...m.origROI.map(r => r.leads), 1);
-                  const rankColor = ['#C9A227', '#AEAEC0', '#C97C2F'];
+                  const rankColor = ['var(--gold)', '#AEAEC0', '#C97C2F'];
                   return m.origROI.slice(0, 6).map((r, i) => {
                     const conv = r.leads > 0 ? Math.round((r.fechados / r.leads) * 100) : 0;
                     const convColor = conv >= 25 ? '#22C55E' : conv >= 10 ? '#F97316' : '#EF4444';
@@ -571,8 +587,8 @@ export default function GestorPage() {
                     return (
                       <div key={i} style={{
                         padding: '10px 12px', borderRadius: 10,
-                        background: isTop ? 'rgba(201,162,39,0.07)' : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${isTop ? 'rgba(201,162,39,0.18)' : 'rgba(255,255,255,0.05)'}`,
+                        background: isTop ? 'rgba(var(--gold-rgb),0.07)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isTop ? 'rgba(var(--gold-rgb),0.18)' : 'rgba(255,255,255,0.05)'}`,
                       }}>
                         {/* Top row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
@@ -586,13 +602,26 @@ export default function GestorPage() {
                             <div style={{ width: `${(r.leads / maxL) * 100}%`, height: '100%', background: isTop ? 'var(--gold)' : 'rgba(255,255,255,0.2)', borderRadius: 99, transition: 'width 0.6s ease' }} />
                           </div>
                           <span style={{ fontSize: 9, color: 'var(--text3)', flexShrink: 0 }}>{r.leads} lead{r.leads !== 1 ? 's' : ''}</span>
-                          {conv > 0 ? (
-                            <span style={{ fontSize: 9, fontWeight: 700, color: convColor, background: `${convColor}18`, border: `1px solid ${convColor}30`, padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
-                              {conv}%
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: 9, color: '#22C55E' }}>{r.fechados > 0 ? `✓ ${r.fechados}` : '—'}</span>
-                          )}
+                          {(() => {
+                            const investimento = state.investimentos[r.orig] || 0;
+                            if (investimento > 0) {
+                              const roi = Math.round(((r.receita - investimento) / investimento) * 100);
+                              const roiColor = roi >= 100 ? '#22C55E' : roi >= 0 ? '#F97316' : '#EF4444';
+                              return (
+                                <span title={`Investido: ${fmtR(investimento)}`} style={{ fontSize: 9, fontWeight: 700, color: roiColor, background: `${roiColor}18`, border: `1px solid ${roiColor}30`, padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
+                                  ROI {roi >= 0 ? '+' : ''}{roi}%
+                                </span>
+                              );
+                            }
+                            if (conv > 0) {
+                              return (
+                                <span style={{ fontSize: 9, fontWeight: 700, color: convColor, background: `${convColor}18`, border: `1px solid ${convColor}30`, padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
+                                  {conv}%
+                                </span>
+                              );
+                            }
+                            return <span style={{ fontSize: 9, color: '#22C55E' }}>{r.fechados > 0 ? `✓ ${r.fechados}` : '—'}</span>;
+                          })()}
                         </div>
                       </div>
                     );
@@ -624,8 +653,45 @@ export default function GestorPage() {
           </div>
         </div>
 
+        {/* ══ CADASTROS POR USUÁRIO ══ */}
+        <div className="dash-meta">
+          <div className="dash-section-title">Cadastros por Usuário
+            <span style={{ fontSize: 9, fontWeight: 400, color: 'var(--text3)', marginLeft: 6 }}>quem registrou cada lead</span>
+          </div>
+          {m.porUsuario.length === 0 ? (
+            <div style={{ color: 'var(--text3)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>Nenhum cadastro registrado ainda</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(m.porUsuario.length, 4)}, 1fr)`, gap: 12, marginTop: 8 }}>
+              {m.porUsuario.map((u) => {
+                const semRegistro = u.orig.startsWith('Sem registro');
+                return (
+                  <div key={u.orig} style={{
+                    padding: '14px 16px', borderRadius: 12,
+                    background: semRegistro ? 'rgba(255,255,255,0.02)' : 'var(--bg3)',
+                    border: `1px solid ${semRegistro ? 'rgba(255,255,255,0.05)' : 'var(--border2)'}`,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: semRegistro ? 'var(--text3)' : 'var(--text)', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: semRegistro ? 'italic' : 'normal' }}>
+                      {u.orig}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700, color: 'var(--gold)', fontVariantNumeric: 'tabular-nums' }}>{u.leads}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text3)' }}>lead{u.leads !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text2)' }}>
+                      {u.fechados} fechado{u.fechados !== 1 ? 's' : ''} · {u.conversao}% conv.
+                    </div>
+                    {u.receita > 0 && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', marginTop: 4 }}>{fmtR(u.receita)}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ══ ALERTAS ══ */}
-        <div className="gestor-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        <div className="gestor-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
 
           {/* Leads parados na etapa */}
           <div className="dash-meta">

@@ -4,12 +4,21 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
-import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, ICP_BADGE, type Lead, type LeadStatus } from '@/types';
+import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, leadData, leadHora, getLeadValor, diasParaResolucao } from '@/lib/utils';
+import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, ICP_BADGE, MOTIVOS_PERDA, type Lead, type LeadStatus } from '@/types';
 import { exportLeadPDF, exportLeadCSV } from '@/lib/exportLead';
 import ICPModal from '@/components/ICPModal';
 
 const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700'];
+
+// Atalho rápido de classificação ICP — mesmos campos do diagnóstico completo
+// (icp_score/icp_label), sem precisar responder as 4 perguntas quando o
+// vendedor já sabe de cabeça o perfil do lead.
+const TEMPERATURAS = [
+  { label: 'ICP frio',  icon: '🧊', score: 20, color: '#E24B4A', bg: 'rgba(226,75,74,0.12)' },
+  { label: 'ICP morno', icon: '🌡️', score: 55, color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+  { label: 'ICP ideal', icon: '🔥', score: 85, color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
+] as const;
 
 export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const { state } = useCRM();
@@ -29,6 +38,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const ld = leadData(lead);
   const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
   const valor = getLeadValor(lead);
+  const diasResolucao = diasParaResolucao(lead);
   const score = qualScore(lead);
   const fuSt = fuStatus(lead.followup);
 
@@ -87,16 +97,21 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   }
 
   async function handleDelete() {
-    if (!confirm(`Remover o lead "${lead.nome}" permanentemente?`)) return;
+    if (!confirm(`Remover "${lead.nome}"? Ele vai pra Lixeira e pode ser restaurado depois.`)) return;
     await deleteLead(lead.id);
     onClose();
   }
 
   return (
     <>
-      <motion.div className="lead-panel open" style={{ transform: 'none' }}
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+      <motion.div className="lead-panel-overlay"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+      <motion.div className="lead-panel"
+        initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="panel-header">
@@ -104,6 +119,14 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
             <div className="panel-name">{lead.nome}</div>
             <div className="panel-seg">{lead.seg || 'Não definido'} · {lead.orig || '—'}</div>
             <div className="panel-arrival">Chegou em {ld} às {leadHora(lead)}</div>
+            {lead.criado_por_nome && (
+              <div className="panel-arrival" style={{ color: 'var(--text3)' }}>Cadastrado por {lead.criado_por_nome}</div>
+            )}
+            {diasResolucao != null && (
+              <div className="panel-arrival" style={{ color: lead.status === 'fechado' ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+                {lead.status === 'fechado' ? '✅ Fechado' : '❌ Perdido'} em {diasResolucao} dia{diasResolucao !== 1 ? 's' : ''} de jornada
+              </div>
+            )}
             {stale && (
               <div className="panel-stale" style={{ display: 'inline-flex' }}>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -178,6 +201,34 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
             <div className="qt"><div className="qf" style={{ width: `${(score / 5) * 100}%` }} /></div>
           </div>
 
+          {/* Temperatura rápida */}
+          <div style={{ marginBottom: 14 }}>
+            <div className="plabel" style={{ marginBottom: 8 }}>Temperatura</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {TEMPERATURAS.map((t) => {
+                const active = lead.icp_label === t.label;
+                return (
+                  <button
+                    key={t.label}
+                    onClick={() => saveICP(lead.id, t.score, t.label)}
+                    style={{
+                      flex: 1, padding: '8px 6px', borderRadius: 8,
+                      background: active ? t.bg : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${active ? t.color : 'rgba(255,255,255,0.08)'}`,
+                      color: active ? t.color : 'var(--text3)',
+                      fontSize: 11.5, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {t.icon} {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ICP */}
           <div style={{ marginBottom: 14 }}>
             <div className="plabel" style={{ marginBottom: 8 }}>ICP — Diagnóstico</div>
@@ -210,9 +261,9 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                 style={{
                   display: 'flex', alignItems: 'center', gap: 7,
                   width: '100%', padding: '10px 14px',
-                  background: 'rgba(201,162,39,0.06)',
-                  border: '1px solid rgba(201,162,39,0.25)',
-                  borderRadius: 8, color: '#C9A227',
+                  background: 'rgba(var(--gold-rgb),0.06)',
+                  border: '1px solid rgba(var(--gold-rgb),0.25)',
+                  borderRadius: 8, color: 'var(--gold)',
                   fontSize: 12.5, fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'Inter, sans-serif',
                   justifyContent: 'center',
@@ -223,17 +274,28 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
             )}
           </div>
 
-          {/* Mover para etapa */}
-          <div className="plabel">Mover para etapa</div>
-          <select className="pmove" value={lead.status} onChange={(e) => handleMove(e.target.value)}>
-            {KANBAN_COLS.map((col) => <option key={col.id} value={col.id}>{col.label}</option>)}
-          </select>
+          {/* Etapa — stepper visual */}
+          <div className="plabel" style={{ marginBottom: 10 }}>Etapa</div>
+          <StageStepper current={lead.status} onSelect={handleMove} />
+          <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 2 }}>
+            Etapa atual: <strong style={{ color: 'var(--text)' }}>{KANBAN_COLS.find((c) => c.id === lead.status)?.label ?? lead.status}</strong>
+          </div>
+          <button
+            onClick={() => setPerdaOpen(true)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text3)',
+              fontSize: 11, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              padding: '4px 0 12px', textDecoration: 'underline',
+            }}
+          >
+            Marcar como perdido
+          </button>
 
           {/* Follow-up */}
           <div className="p-fu-wrap">
             <div className="plabel">Próximo follow-up</div>
             <div className="p-fu-row">
-              <input type="date" className="p-fu-input" value={fuDate}
+              <input type="datetime-local" className="p-fu-input" value={fuDate}
                 onChange={(e) => setFuDate(e.target.value)}
                 onBlur={(e) => setFollowup(lead.id, e.target.value || null)} />
               <button className="p-fu-clear" onClick={() => { setFuDate(''); setFollowup(lead.id, null); }}>✕ Limpar</button>
@@ -290,10 +352,10 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
               onClick={() => setExportOpen((o) => !o)}
               style={{
                 padding: '8px 13px',
-                background: exportOpen ? 'rgba(201,162,39,0.15)' : 'rgba(201,162,39,0.08)',
-                border: '1px solid rgba(201,162,39,0.3)',
+                background: exportOpen ? 'rgba(var(--gold-rgb),0.15)' : 'rgba(var(--gold-rgb),0.08)',
+                border: '1px solid rgba(var(--gold-rgb),0.3)',
                 borderRadius: 8,
-                color: '#C9A227',
+                color: 'var(--gold)',
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -338,8 +400,8 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="#E8BB3A" strokeWidth="1.2"/>
-                    <path d="M4.5 5h5M4.5 7.5h5M4.5 10h3" stroke="#E8BB3A" strokeWidth="1.1" strokeLinecap="round"/>
+                    <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="var(--gold2)" strokeWidth="1.2"/>
+                    <path d="M4.5 5h5M4.5 7.5h5M4.5 10h3" stroke="var(--gold2)" strokeWidth="1.1" strokeLinecap="round"/>
                   </svg>
                   <span>PDF visual</span>
                 </button>
@@ -372,6 +434,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
           <button className="p-dbtn" onClick={handleDelete}>Remover</button>
         </div>
       </motion.div>
+      </motion.div>
 
       {/* Modal ICP */}
       <AnimatePresence>
@@ -400,7 +463,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
               </div>
               <p style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
                 Qualifique este lead antes de avançar para{' '}
-                <strong>{pendingStatus === 'proposta' ? 'Proposta' : 'Negociação'}</strong>.
+                <strong>{KANBAN_COLS.find((c) => c.id === pendingStatus)?.label ?? pendingStatus}</strong>.
                 Isso garante que o seu tempo comercial vai para quem tem real potencial.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -445,13 +508,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                 <label>Motivo</label>
                 <select value={perdaMotivo} onChange={(e) => setPerdaMotivo(e.target.value)}>
                   <option value="">Selecione o motivo</option>
-                  <option>Sem orçamento</option>
-                  <option>Escolheu concorrente</option>
-                  <option>Não respondeu</option>
-                  <option>Proposta rejeitada</option>
-                  <option>Timing ruim</option>
-                  <option>Problema interno</option>
-                  <option>Outro</option>
+                  {MOTIVOS_PERDA.map((m) => <option key={m}>{m}</option>)}
                 </select>
               </div>
               <div className="mf">
@@ -467,5 +524,45 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// ─── Stepper visual de etapas ─────────────────────────────────────────────────
+// "Perdido" fica fora do stepper (não é um avanço linear) — vira o link
+// "Marcar como perdido" logo abaixo.
+function StageStepper({ current, onSelect }: { current: LeadStatus; onSelect: (status: string) => void }) {
+  const stages = KANBAN_COLS.filter((c) => c.id !== 'perdido');
+  const currentIdx = stages.findIndex((s) => s.id === current);
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+      {stages.map((s, i) => {
+        const done = i < currentIdx;
+        const active = i === currentIdx;
+        return (
+          <div key={s.id} style={{ display: 'flex', alignItems: 'center', flex: i < stages.length - 1 ? 1 : undefined, minWidth: 0 }}>
+            <button
+              onClick={() => onSelect(s.id)}
+              title={s.label}
+              style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: done || active ? s.color : 'rgba(255,255,255,0.06)',
+                border: active ? '2px solid #fff' : 'none',
+                boxShadow: active ? `0 0 0 3px ${s.color}55` : 'none',
+                color: done || active ? '#07050a' : 'var(--text3)',
+                fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                fontFamily: 'Inter, sans-serif', transition: 'all 0.15s',
+              }}
+            >
+              {done ? '✓' : i + 1}
+            </button>
+            {i < stages.length - 1 && (
+              <div style={{ flex: 1, height: 2, minWidth: 8, background: done ? s.color : 'rgba(255,255,255,0.08)' }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

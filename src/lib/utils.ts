@@ -102,21 +102,74 @@ export function qualScore(l: Partial<Lead>): number {
   return s;
 }
 
-/** Valor do lead (explícito ou pelo interesse)
- *  Corrige valores salvos com ponto como separador de milhar (ex: 1.799 → 1799)
- *  Produtos da Me Produz. custam R$700+, então v < 100 indica erro de input pt-BR */
-export function getLeadValor(l: Partial<Lead>, val: Record<string, number> = VAL): number {
+/** Corrige valores salvos com ponto como separador de milhar (ex: 1.799 → 1799).
+ *  Produtos da Me Produz. custam R$700+, então v < 100 indica erro de input pt-BR.
+ *  Usada tanto no valor legado do lead quanto no valor de cada oportunidade —
+ *  o backfill da migration copiou `leads.valor` pra `oportunidades.valor` sem
+ *  aplicar essa correção, então oportunidades antigas também podem ter o bug. */
+function corrigeValorPtBR(v: number | null | undefined): number {
+  if (v == null) return 0;
+  const n = Number(v);
+  if (isNaN(n) || n <= 0) return 0;
+  return n < 100 ? Math.round(n * 1000) : n;
+}
+
+/** Valor legado do lead (campo `valor` direto, ou pelo interesse como fallback)
+ *  Usado como fallback pelas funções de oportunidade abaixo quando o lead ainda
+ *  não tem nenhuma oportunidade carregada (pré-migration/pré-backfill). */
+function getLeadValorLegado(l: Partial<Lead>, val: Record<string, number> = VAL): number {
   if (l.valor != null) {
-    const v = Number(l.valor);
-    if (!isNaN(v) && v > 0) {
-      return v < 100 ? Math.round(v * 1000) : v;
-    }
+    const v = corrigeValorPtBR(Number(l.valor));
+    if (v > 0) return v;
   }
   if (l.int) {
     const key = Object.keys(val).find((k) => l.int?.toLowerCase().includes(k.toLowerCase()));
     if (key) return val[key];
   }
   return 0;
+}
+
+/** Valor total do lead — soma de todas as oportunidades não-perdidas.
+ *  Se o lead ainda não tem oportunidades carregadas, cai no valor legado
+ *  (campo `valor` do lead) — mantém os pontos de uso existentes funcionando. */
+export function getLeadValor(l: Partial<Lead>, val: Record<string, number> = VAL): number {
+  if (l.oportunidades && l.oportunidades.length > 0) {
+    return l.oportunidades
+      .filter((o) => o.status !== 'perdida')
+      .reduce((s, o) => s + corrigeValorPtBR(o.valor), 0);
+  }
+  return getLeadValorLegado(l, val);
+}
+
+/** Valor ainda em aberto do lead — soma das oportunidades `aberta`. */
+export function getLeadValorAberto(l: Partial<Lead>, val: Record<string, number> = VAL): number {
+  if (l.oportunidades && l.oportunidades.length > 0) {
+    return l.oportunidades
+      .filter((o) => o.status === 'aberta')
+      .reduce((s, o) => s + corrigeValorPtBR(o.valor), 0);
+  }
+  return l.status !== 'fechado' && l.status !== 'perdido' ? getLeadValorLegado(l, val) : 0;
+}
+
+/** Valor já fechado do lead — soma das oportunidades `fechada`. */
+export function getLeadValorFechado(l: Partial<Lead>, val: Record<string, number> = VAL): number {
+  if (l.oportunidades && l.oportunidades.length > 0) {
+    return l.oportunidades
+      .filter((o) => o.status === 'fechada')
+      .reduce((s, o) => s + corrigeValorPtBR(o.valor), 0);
+  }
+  return l.status === 'fechado' ? getLeadValorLegado(l, val) : 0;
+}
+
+/** Valor perdido do lead — soma das oportunidades `perdida`. Usado em telas de
+ *  "motivo de perda" — um lead misto pode ter perdido só uma parte. */
+export function getLeadValorPerdido(l: Partial<Lead>, val: Record<string, number> = VAL): number {
+  if (l.oportunidades && l.oportunidades.length > 0) {
+    return l.oportunidades
+      .filter((o) => o.status === 'perdida')
+      .reduce((s, o) => s + corrigeValorPtBR(o.valor), 0);
+  }
+  return l.status === 'perdido' ? getLeadValorLegado(l, val) : 0;
 }
 
 /** Status do follow-up (vencido / hoje / em X dias) */

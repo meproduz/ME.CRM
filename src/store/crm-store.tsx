@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
-import type { Lead, Usuario, Cliente, Produto, WaTemplates } from '@/types';
+import type { Lead, Usuario, Cliente, Produto, WaTemplates, Oportunidade } from '@/types';
 
 // ─── Estado global ─────────────────────────────────────────────────────────────
 
@@ -87,7 +87,10 @@ type Action =
   | { type: 'SET_PAGINATION'; payload: { page: number; hasMore: boolean; totalCount: number } }
   | { type: 'ADD_HIST_ENTRY'; payload: { leadId: string; entry: string; statusChangedAt?: string } }
   | { type: 'SET_ICP'; payload: { leadId: string; icp_score: number; icp_label: string } }
-  | { type: 'SET_PERIODO'; payload: CRMState['periodoAtivo'] };
+  | { type: 'SET_PERIODO'; payload: CRMState['periodoAtivo'] }
+  | { type: 'SET_OPORTUNIDADES'; payload: { leadId: string; oportunidades: Oportunidade[] } }
+  | { type: 'ADD_OPORTUNIDADE'; payload: { leadId: string; oportunidade: Oportunidade } }
+  | { type: 'UPDATE_OPORTUNIDADE'; payload: { leadId: string; oportunidadeId: string; patch: Partial<Oportunidade> } };
 
 function reducer(state: CRMState, action: Action): CRMState {
   switch (action.type) {
@@ -130,6 +133,38 @@ function reducer(state: CRMState, action: Action): CRMState {
         leads: state.leads.map((l) =>
           l.id === action.payload.leadId
             ? { ...l, icp_score: action.payload.icp_score, icp_label: action.payload.icp_label }
+            : l
+        ),
+      };
+    case 'SET_OPORTUNIDADES':
+      return {
+        ...state,
+        leads: state.leads.map((l) =>
+          l.id === action.payload.leadId
+            ? { ...l, oportunidades: action.payload.oportunidades }
+            : l
+        ),
+      };
+    case 'ADD_OPORTUNIDADE':
+      return {
+        ...state,
+        leads: state.leads.map((l) =>
+          l.id === action.payload.leadId
+            ? { ...l, oportunidades: [...(l.oportunidades ?? []), action.payload.oportunidade] }
+            : l
+        ),
+      };
+    case 'UPDATE_OPORTUNIDADE':
+      return {
+        ...state,
+        leads: state.leads.map((l) =>
+          l.id === action.payload.leadId
+            ? {
+                ...l,
+                oportunidades: (l.oportunidades ?? []).map((o) =>
+                  o.id === action.payload.oportunidadeId ? { ...o, ...action.payload.patch } : o
+                ),
+              }
             : l
         ),
       };

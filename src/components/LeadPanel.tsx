@@ -1,11 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
+import { useOportunidades } from '@/hooks/useOportunidades';
 import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
 import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, ICP_BADGE, type Lead, type LeadStatus } from '@/types';
+
+const OPORT_STATUS_LABEL: Record<string, string> = {
+  aberta: 'Em aberto', fechada: 'Fechada ✅', perdida: 'Perdida ❌',
+};
+
+function miniBtnStyle(color: string): CSSProperties {
+  return {
+    padding: '4px 9px', background: `${color}18`, border: `1px solid ${color}40`,
+    borderRadius: 6, color, fontSize: 10.5, fontWeight: 700,
+    cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap',
+  };
+}
 import { exportLeadPDF, exportLeadCSV } from '@/lib/exportLead';
 import ICPModal from '@/components/ICPModal';
 
@@ -14,12 +27,19 @@ const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3
 export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const { state } = useCRM();
   const { loadHist, addNota, moveLead, updateField, deleteLead, setFollowup, saveICP } = useLeads();
+  const { addOportunidade, closeOportunidade, loseOportunidade } = useOportunidades();
 
   const [nota, setNota] = useState('');
   const [fuDate, setFuDate] = useState(lead.followup ?? '');
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [perdaMotivo, setPerdaMotivo] = useState('');
   const [perdaObs, setPerdaObs] = useState('');
+  const [novaOportOpen, setNovaOportOpen] = useState(false);
+  const [novaOportNome, setNovaOportNome] = useState('');
+  const [novaOportValor, setNovaOportValor] = useState('');
+  const [perdaOportId, setPerdaOportId] = useState<string | null>(null);
+  const [perdaOportMotivo, setPerdaOportMotivo] = useState('');
+  const [perdaOportObs, setPerdaOportObs] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [showICP, setShowICP]         = useState(false);
@@ -29,6 +49,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const ld = leadData(lead);
   const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
   const valor = getLeadValor(lead);
+  const oportunidades = lead.oportunidades ?? [];
   const score = qualScore(lead);
   const fuSt = fuStatus(lead.followup);
 
@@ -58,6 +79,15 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   }
 
   async function handleMove(status: string) {
+    // Lead com 2+ oportunidades abertas: fechar/perder o card inteiro fica
+    // ambíguo (qual delas?) — resolve oportunidade por oportunidade abaixo.
+    if (status === 'fechado' || status === 'perdido') {
+      const abertas = oportunidades.filter((o) => o.status === 'aberta');
+      if (abertas.length >= 2) {
+        alert('Esse lead tem mais de uma oportunidade em aberto. Feche ou marque cada uma como perdida na seção "Oportunidades" antes de mover o card.');
+        return;
+      }
+    }
     if (status === 'perdido') { setPerdaOpen(true); return; }
     // Gate ICP: exige qualificação antes de avançar para proposta ou negociação
     if ((status === 'proposta' || status === 'negociacao') && !lead.icp_score) {
@@ -66,6 +96,25 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
       return;
     }
     await moveLead(lead.id, status);
+  }
+
+  async function handleAddOportunidade() {
+    const trimmed = novaOportValor.trim();
+    let valor: number | null = null;
+    if (trimmed !== '') {
+      const n = Number(trimmed.replace(/\./g, '').replace(',', '.'));
+      valor = isNaN(n) ? null : n; // preserva 0 explícito em vez de virar null
+    }
+    await addOportunidade(lead.id, { nome: novaOportNome.trim() || null, valor });
+    setNovaOportNome(''); setNovaOportValor(''); setNovaOportOpen(false);
+  }
+
+  async function handleConfirmarPerdaOport() {
+    if (!perdaOportId) return;
+    const motivo = perdaOportMotivo || 'Não informado';
+    const nota2 = perdaOportObs ? `${motivo} — ${perdaOportObs}` : motivo;
+    await loseOportunidade(lead.id, perdaOportId, nota2);
+    setPerdaOportId(null); setPerdaOportMotivo(''); setPerdaOportObs('');
   }
 
   async function handleConfirmICP(score: number, label: string) {
@@ -228,6 +277,61 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
           <select className="pmove" value={lead.status} onChange={(e) => handleMove(e.target.value)}>
             {KANBAN_COLS.map((col) => <option key={col.id} value={col.id}>{col.label}</option>)}
           </select>
+
+          {/* Oportunidades — lista só aparece quando há mais de uma; caso comum
+              (0 ou 1) fica exatamente como antes, sem UI nova visível. */}
+          <div style={{ marginTop: 14, marginBottom: 4 }}>
+            {oportunidades.length > 1 && (
+              <>
+                <div className="plabel" style={{ marginBottom: 8 }}>Oportunidades</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                  {oportunidades.map((o) => (
+                    <div key={o.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                      padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8,
+                    }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {o.nome || 'Oportunidade'}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                          {fmtR(o.valor)} · {OPORT_STATUS_LABEL[o.status]}
+                        </div>
+                      </div>
+                      {o.status === 'aberta' && (
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button onClick={() => closeOportunidade(lead.id, o.id)} style={miniBtnStyle('#22C55E')}>Fechar</button>
+                          <button onClick={() => { setPerdaOportId(o.id); setPerdaOportMotivo(''); setPerdaOportObs(''); }} style={miniBtnStyle('#E24B4A')}>Perder</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {novaOportOpen ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 10, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                <input placeholder="Nome (opcional)" value={novaOportNome} onChange={(e) => setNovaOportNome(e.target.value)} />
+                <input type="number" placeholder="Valor (R$)" value={novaOportValor} onChange={(e) => setNovaOportValor(e.target.value)} />
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="msbtn" style={{ flex: 1 }} onClick={handleAddOportunidade}>Adicionar</button>
+                  <button className="mcbtn" style={{ flex: 1 }} onClick={() => setNovaOportOpen(false)}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setNovaOportOpen(true)}
+                style={{
+                  background: 'none', border: 'none', padding: 0,
+                  color: 'var(--text3)', fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'Inter, sans-serif', textDecoration: 'underline',
+                }}
+              >
+                + Adicionar oportunidade
+              </button>
+            )}
+          </div>
 
           {/* Follow-up */}
           <div className="p-fu-wrap">
@@ -423,6 +527,41 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                 <button className="mcbtn" onClick={() => { setGateOpen(false); setPendingStatus(null); }}>
                   Cancelar
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal perda — de uma oportunidade específica (lead com 2+) */}
+      <AnimatePresence>
+        {perdaOportId && (
+          <motion.div className="modal-overlay" style={{ display: 'flex', zIndex: 400 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setPerdaOportId(null)}>
+            <motion.div className="modal" initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}>
+              <h3>Motivo de perda da oportunidade</h3>
+              <div className="mf">
+                <label>Motivo</label>
+                <select value={perdaOportMotivo} onChange={(e) => setPerdaOportMotivo(e.target.value)}>
+                  <option value="">Selecione o motivo</option>
+                  <option>Sem orçamento</option>
+                  <option>Escolheu concorrente</option>
+                  <option>Não respondeu</option>
+                  <option>Proposta rejeitada</option>
+                  <option>Timing ruim</option>
+                  <option>Problema interno</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+              <div className="mf">
+                <label>Observação (opcional)</label>
+                <textarea placeholder="Detalhes do motivo..." value={perdaOportObs} onChange={(e) => setPerdaOportObs(e.target.value)} />
+              </div>
+              <div className="mfooter">
+                <button className="mcbtn" onClick={() => setPerdaOportId(null)}>Cancelar</button>
+                <button className="msbtn" style={{ background: 'var(--red)', color: '#fff' }} onClick={handleConfirmarPerdaOport}>Registrar perda</button>
               </div>
             </motion.div>
           </motion.div>

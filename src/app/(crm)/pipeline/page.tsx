@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
-import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora, getLeadValor } from '@/lib/utils';
+import { fmtR, isStale, diasAtras, ultimoContato, fmtData, leadData, leadHora, getLeadValor, getLeadValorAberto, getLeadValorFechado } from '@/lib/utils';
 import { KANBAN_COLS, VAL, ORIG_COLORS, ICP_BADGE, type Lead, type LeadStatus } from '@/types';
 import LeadPanel from '@/components/LeadPanel';
 import NovoLeadModal from '@/components/NovoLeadModal';
@@ -39,6 +39,14 @@ export default function PipelinePage() {
     if (!dragId) return;
     const lead = state.leads.find((l) => l.id === dragId);
     if (!lead || lead.status === status) { setDragId(null); setDragOver(null); return; }
+    if (status === 'fechado' || status === 'perdido') {
+      const abertas = (lead.oportunidades ?? []).filter((o) => o.status === 'aberta');
+      if (abertas.length >= 2) {
+        alert('Esse lead tem mais de uma oportunidade em aberto. Feche ou marque cada uma como perdida dentro do lead antes de mover o card.');
+        setDragId(null); setDragOver(null);
+        return;
+      }
+    }
     if (status === 'perdido') {
       setPerdaData({ id: dragId });
       setShowPerda(true);
@@ -93,7 +101,12 @@ export default function PipelinePage() {
         <div className="board" style={{ gridTemplateColumns: `repeat(${KANBAN_COLS.length}, minmax(0,1fr))`, minWidth: 900 }}>
           {KANBAN_COLS.map((col) => {
             const colLeads = fl.filter((l) => l.status === col.id);
-            const money = colLeads.reduce((a, l) => a + getLeadValor(l), 0);
+            // Coluna "Fechado" soma a parte fechada; as demais somam só a parte
+            // ainda aberta — evita contar duas vezes a parte já fechada de um
+            // lead misto (uma vez aqui, outra na coluna Fechado/no dashboard).
+            const money = col.id === 'fechado'
+              ? colLeads.reduce((a, l) => a + getLeadValorFechado(l), 0)
+              : colLeads.reduce((a, l) => a + getLeadValorAberto(l), 0);
             const isOver = dragOver === col.id;
 
             return (
@@ -192,6 +205,7 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
   const ld = leadData(lead);
   const stale = isStale(lead.hist, ld, lead.status, lead.status_changed_at, lead.lastContact);
   const valor = getLeadValor(lead);
+  const valorFechado = getLeadValorFechado(lead);
   const origColor = ORIG_COLORS[lead.orig ?? ''] ?? '#555';
   const isClosed = lead.status === 'fechado';
   const fuNow = lead.followup && new Date(lead.followup + 'T00:00:00') <= new Date();
@@ -221,6 +235,17 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
       {fuOk && <div className="fu-badge fu-ok">📅 {fmtData(lead.followup)}</div>}
 
       {valor > 0 && <div className="card-valor">{fmtR(valor)}</div>}
+
+      {!isClosed && valorFechado > 0 && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+          padding: '2px 8px', borderRadius: 100,
+          background: 'rgba(34,197,94,0.15)', color: '#22C55E',
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
+        }}>
+          ✓ {fmtR(valorFechado)} já fechado
+        </div>
+      )}
 
       <div className="card-foot">
         <span className="tag" style={{ background: `${origColor}22`, color: origColor }}>

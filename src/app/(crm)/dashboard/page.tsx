@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, isStale, fmtData, ultimoContato, leadData, getLeadValor } from '@/lib/utils';
+import { fmtR, diasAtras, isStale, fmtData, ultimoContato, leadData, getLeadValor, getLeadValorAberto, getLeadValorFechado } from '@/lib/utils';
 import { KANBAN_COLS, ORIGENS, ORIG_COLORS, VAL } from '@/types';
 
 function parseLeadDate(data: string): Date | null {
@@ -77,8 +77,11 @@ export default function DashboardPage() {
 
     const fechados = leads.filter((l) => l.status === 'fechado');
     const abertos  = leads.filter((l) => l.status !== 'fechado' && l.status !== 'perdido');
-    const mrr      = fechados.reduce((a, l) => a + getLeadValor(l), 0);
-    const pipe     = abertos.reduce((a, l) => a + getLeadValor(l), 0);
+    // Soma por oportunidade, não por lead: um lead misto (parte fechada, parte
+    // aberta) contribui pros dois números ao mesmo tempo — não é filtrado por
+    // status do lead antes de somar.
+    const mrr      = leads.reduce((a, l) => a + getLeadValorFechado(l), 0);
+    const pipe     = leads.reduce((a, l) => a + getLeadValorAberto(l), 0);
     const conv     = leads.length ? Math.round((fechados.length / leads.length) * 100) : 0;
     const pct      = metaMensal > 0 ? Math.min(Math.round((mrr / metaMensal) * 100), 100) : 0;
     const falta    = Math.max(0, metaMensal - mrr);
@@ -89,8 +92,8 @@ export default function DashboardPage() {
     const prevM = leads.filter(l => { const d = parseLeadDate(leadData(l)); return d ? d.getMonth() === pm && d.getFullYear() === py : false; });
     const tmF = tm.filter(l => l.status === 'fechado');
     const pmF = prevM.filter(l => l.status === 'fechado');
-    const tmMrr = tmF.reduce((a, l) => a + getLeadValor(l), 0);
-    const pmMrr = pmF.reduce((a, l) => a + getLeadValor(l), 0);
+    const tmMrr = tm.reduce((a, l) => a + getLeadValorFechado(l), 0);
+    const pmMrr = prevM.reduce((a, l) => a + getLeadValorFechado(l), 0);
     const tmConv = tm.length > 0 ? Math.round((tmF.length / tm.length) * 100) : 0;
     const pmConv = prevM.length > 0 ? Math.round((pmF.length / prevM.length) * 100) : 0;
     const prevAbertos = prevM.filter(l => l.status !== 'fechado' && l.status !== 'perdido').length;

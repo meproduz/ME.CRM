@@ -46,6 +46,7 @@ export interface Lead {
   // Virtual (não vem do banco diretamente)
   hist: string[];
   lastContact?: string; // último entry do historico — pré-carregado para stale detection sem abrir o lead
+  oportunidades?: Oportunidade[]; // pré-carregado em loadLeads (ver useLeads.ts)
 }
 
 export interface LeadHistorico {
@@ -53,6 +54,22 @@ export interface LeadHistorico {
   lead_id: string;
   descricao: string;
   created_at: string;
+}
+
+// ─── Oportunidades — um lead pode ter 1+ (ver supabase-migration-oportunidades.sql) ──
+
+export type OportunidadeStatus = 'aberta' | 'fechada' | 'perdida';
+
+export interface Oportunidade {
+  id: string;
+  lead_id: string;
+  cliente_id: string;
+  nome: string | null;
+  valor: number | null;
+  status: OportunidadeStatus;
+  motivo_perda: string | null;
+  created_at: string;
+  status_changed_at?: string | null;
 }
 
 export interface Usuario {

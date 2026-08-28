@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useCRM } from '@/store/crm-store';
-import type { Lead } from '@/types';
+import type { Lead, Oportunidade } from '@/types';
 import { VAL } from '@/types';
 
 // ── Probabilidade de fechamento por etapa ─────────────────────────────────────
@@ -23,7 +23,7 @@ export const COR_ETAPA: Record<string, string> = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-import { getLeadValor } from '@/lib/utils';
+import { getLeadValor, getLeadValorAberto, getLeadValorFechado, getLeadValorPerdido } from '@/lib/utils';
 export { getLeadValor } from '@/lib/utils';
 
 function mesAno(date: Date): string {
@@ -150,8 +150,26 @@ export function useGestorMetrics(): GestorMetrics {
         .order('created_at', { ascending: false });
 
       if (leadsErr) throw leadsErr;
-      const all = (leads ?? []) as Lead[];
+      let all = (leads ?? []) as Lead[];
       const allIds = all.map(l => l.id);
+
+      // 1b. Oportunidades de todos os leads — este hook não passa por useLeads/
+      // state.leads, então precisa da própria busca em lote (mesmo padrão do
+      // preload em useLeads.ts). Sem isso, getLeadValor*/etapas cairiam todos
+      // no fallback legado (campo `valor` do lead).
+      if (allIds.length > 0) {
+        const { data: oportData } = await supabase
+          .from('oportunidades')
+          .select('*')
+          .in('lead_id', allIds);
+        if (oportData) {
+          const byLead: Record<string, Oportunidade[]> = {};
+          for (const o of oportData as Oportunidade[]) {
+            (byLead[o.lead_id] ??= []).push(o);
+          }
+          all = all.map(l => ({ ...l, oportunidades: byLead[l.id] ?? [] }));
+        }
+      }
 
       // 2. Última atividade por lead (para alertas de leads parados)
       const activeIds = all
@@ -217,44 +235,59 @@ function buildMetrics(
   const inicioMesAtual = startOfMonth(agora);
   const inicioMesAnterior = startOfMonth(new Date(agora.getFullYear(), agora.getMonth() - 1, 1));
 
-  // ── Mapa de datas reais de fechamento ─────────────────────────────────────────
-  // Prioridade: 1) status_change historico com to='fechado', 2) status_changed_at, 3) created_at
-  const closeDateMap: Record<string, Date> = {};
+  // ── Eventos de fechamento — nível de OPORTUNIDADE, não de lead ────────────────
+  // Um lead misto (parte fechada, parte ainda aberta) não bate mais como
+  // "fechado" só quando o card inteiro fecha — cada oportunidade fechada conta
+  // pela sua própria data, então a receita do mês bate mesmo com o card ainda
+  // em "Negociação". Prioridade de data por oportunidade: 1) status_changed_at
+  // dela mesma, 2) status_change histórico do lead (to='fechado'), 3)
+  // status_changed_at do lead, 4) created_at do lead.
+  const leadCloseFallback: Record<string, Date> = {};
   statusChanges.forEach(sc => {
     const meta = sc.meta_json as { to?: string; at?: string } | null;
     if (meta?.to === 'fechado' && meta?.at) {
       const d = new Date(meta.at);
-      if (!closeDateMap[sc.lead_id] || d > closeDateMap[sc.lead_id]) {
-        closeDateMap[sc.lead_id] = d;
+      if (!leadCloseFallback[sc.lead_id] || d > leadCloseFallback[sc.lead_id]) {
+        leadCloseFallback[sc.lead_id] = d;
       }
     }
   });
-  all.filter(l => l.status === 'fechado').forEach(l => {
-    if (!closeDateMap[l.id]) {
-      if (l.status_changed_at) closeDateMap[l.id] = new Date(l.status_changed_at);
-      else closeDateMap[l.id] = new Date(l.created_at); // fallback
+
+  interface FechamentoEvento { leadId: string; valor: number; data: Date }
+  const fechamentos: FechamentoEvento[] = [];
+  all.forEach(l => {
+    const oports = l.oportunidades ?? [];
+    const fechadas = oports.filter(o => o.status === 'fechada');
+    if (fechadas.length > 0) {
+      fechadas.forEach(o => {
+        const data = o.status_changed_at
+          ? new Date(o.status_changed_at)
+          : leadCloseFallback[l.id] ?? new Date(l.status_changed_at ?? l.created_at);
+        fechamentos.push({ leadId: l.id, valor: o.valor ?? 0, data });
+      });
+    } else if (oports.length === 0 && l.status === 'fechado') {
+      // Fallback legado — lead sem nenhuma oportunidade carregada ainda
+      // (pré-migration/backfill em algum fork)
+      const data = leadCloseFallback[l.id] ?? new Date(l.status_changed_at ?? l.created_at);
+      fechamentos.push({ leadId: l.id, valor: getLeadValor(l), data });
     }
   });
 
   function inRange(d: Date, from: Date, to: Date) { return d >= from && d < to; }
 
-  // ── KPIs mês atual — usa data REAL de fechamento ──────────────────────────────
+  // ── KPIs mês atual — usa data REAL de fechamento, por oportunidade ────────────
+  // Nota: fechAtual/fechAnterior agora contam OPORTUNIDADES fechadas no
+  // período, não leads — pra caso comum (1 oportunidade por lead) o número é
+  // idêntico a antes; só diverge pra leads com múltiplas oportunidades, que é
+  // exatamente o caso que passa a ser contado corretamente.
   const leadsAtual   = all.filter(l => inRange(new Date(l.created_at), inicioMesAtual, agora));
   const leadsAnterior = all.filter(l => inRange(new Date(l.created_at), inicioMesAnterior, inicioMesAtual));
 
-  const fechAtual = all.filter(l => {
-    if (l.status !== 'fechado') return false;
-    const cd = closeDateMap[l.id];
-    return cd && inRange(cd, inicioMesAtual, agora);
-  });
-  const fechAnterior = all.filter(l => {
-    if (l.status !== 'fechado') return false;
-    const cd = closeDateMap[l.id];
-    return cd && inRange(cd, inicioMesAnterior, inicioMesAtual);
-  });
+  const fechAtual    = fechamentos.filter(f => inRange(f.data, inicioMesAtual, agora));
+  const fechAnterior = fechamentos.filter(f => inRange(f.data, inicioMesAnterior, inicioMesAtual));
 
-  const recAtual   = fechAtual.reduce((s, l) => s + getLeadValor(l), 0);
-  const recAnterior = fechAnterior.reduce((s, l) => s + getLeadValor(l), 0);
+  const recAtual    = fechAtual.reduce((s, f) => s + f.valor, 0);
+  const recAnterior = fechAnterior.reduce((s, f) => s + f.valor, 0);
 
   function trend(a: number, b: number) {
     if (b === 0) return a > 0 ? 100 : 0;
@@ -266,9 +299,11 @@ function buildMetrics(
   const ticketMedio = fechAtual.length > 0 ? Math.round(recAtual / fechAtual.length) : 0;
 
   // ── Forecast ──────────────────────────────────────────────────────────────────
+  // Pesa só a parte AINDA ABERTA do lead — a parte já fechada de um lead misto
+  // não entra de novo aqui (já está em recAtual/forecastComFechados).
   const forecast = all
     .filter(l => l.status !== 'perdido' && l.status !== 'fechado')
-    .reduce((s, l) => s + getLeadValor(l) * (PROB_ETAPA[l.status] ?? 0), 0);
+    .reduce((s, l) => s + getLeadValorAberto(l) * (PROB_ETAPA[l.status] ?? 0), 0);
   const forecastComFechados = recAtual + forecast;
   const probBaterMeta = metaMensal > 0
     ? Math.min(100, Math.round((forecastComFechados / metaMensal) * 100)) : 0;
@@ -300,7 +335,15 @@ function buildMetrics(
   const etapas: EtapaMetric[] = ORDEM.map((status, idx) => {
     const leadsNaEtapa = all.filter(l => l.status === status);
     const count = leadsNaEtapa.length;
-    const valor = leadsNaEtapa.reduce((s, l) => s + getLeadValor(l), 0);
+    // Etapas ativas: só a parte aberta — um lead misto pode ter valor já
+    // fechado que não pertence mais a "quanto tem parado nesta etapa".
+    // Etapa "Fechado"/"Perdido": usa o valor real daquele desfecho, não a
+    // parte aberta (que seria sempre 0 pra leads já resolvidos).
+    const valor = status === 'fechado'
+      ? leadsNaEtapa.reduce((s, l) => s + getLeadValorFechado(l), 0)
+      : status === 'perdido'
+      ? leadsNaEtapa.reduce((s, l) => s + getLeadValorPerdido(l), 0)
+      : leadsNaEtapa.reduce((s, l) => s + getLeadValorAberto(l), 0);
     const prevCount = idx > 0 ? all.filter(l => l.status === ORDEM[idx - 1]).length : totalFunil;
     const pctConversao = prevCount > 0 ? Math.round((count / (count + prevCount || 1)) * 100) : 0;
     const tempos = temposPorEtapa[status] ?? [];
@@ -343,12 +386,8 @@ function buildMetrics(
       const d = new Date(l.created_at);
       return d >= mesDate && d < fimMes;
     });
-    const mFech = all.filter(l => {
-      if (l.status !== 'fechado') return false;
-      const cd = closeDateMap[l.id];
-      return cd && cd >= mesDate && cd < fimMes;
-    });
-    const mRec = mFech.reduce((s, l) => s + getLeadValor(l), 0);
+    const mFech = fechamentos.filter(f => f.data >= mesDate && f.data < fimMes);
+    const mRec = mFech.reduce((s, f) => s + f.valor, 0);
 
     historicMensal.push({
       mes: mesAno(mesDate),
@@ -376,7 +415,7 @@ function buildMetrics(
         tel: lead.tel,
         orig: lead.orig,
         seg: lead.seg,
-        valor: getLeadValor(lead),
+        valor: getLeadValorPerdido(lead),
         dataPerdido: lead.status_changed_at
           ? new Date(lead.status_changed_at).toLocaleDateString('pt-BR')
           : lead.data ?? '',
@@ -421,7 +460,11 @@ function buildMetrics(
     .slice(0, 8)
     .map(([orig, ls]) => {
       const fechs = ls.filter(l => l.status === 'fechado');
-      const receita = fechs.reduce((s, l) => s + getLeadValor(l), 0);
+      // Receita soma por oportunidade fechada (não filtra por status do lead) —
+      // um lead misto dessa origem contribui com a parte já fechada mesmo que
+      // o card ainda esteja aberto. `fechs`/`ticketMedio` continuam contando
+      // leads totalmente fechados, como aproximação de "negócios fechados".
+      const receita = ls.reduce((s, l) => s + getLeadValorFechado(l), 0);
       return {
         orig,
         leads: ls.length,

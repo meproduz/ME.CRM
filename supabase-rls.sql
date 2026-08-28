@@ -13,6 +13,7 @@ alter table if exists public.leads            enable row level security;
 alter table if exists public.leads_historico  enable row level security;
 alter table if exists public.usuarios         enable row level security;
 alter table if exists public.clientes         enable row level security;
+alter table if exists public.oportunidades    enable row level security;
 
 -- ══════════════════════════════════════════════════════════════════════
 -- TABELA: leads
@@ -107,6 +108,56 @@ create policy "hist_delete" on public.leads_historico
         where id = auth.uid()
         limit 1
       )
+    )
+  );
+
+-- ══════════════════════════════════════════════════════════════════════
+-- TABELA: oportunidades
+-- Regra: cliente_id da oportunidade deve bater com o cliente_id do
+-- usuário logado (denormalizado direto na tabela, mesmo padrão de `leads`)
+-- ══════════════════════════════════════════════════════════════════════
+
+drop policy if exists "oportunidades_select" on public.oportunidades;
+create policy "oportunidades_select" on public.oportunidades
+  for select
+  using (
+    cliente_id = (
+      select cliente_id from public.usuarios
+      where id = auth.uid()
+      limit 1
+    )
+  );
+
+drop policy if exists "oportunidades_insert" on public.oportunidades;
+create policy "oportunidades_insert" on public.oportunidades
+  for insert
+  with check (
+    cliente_id = (
+      select cliente_id from public.usuarios
+      where id = auth.uid()
+      limit 1
+    )
+  );
+
+drop policy if exists "oportunidades_update" on public.oportunidades;
+create policy "oportunidades_update" on public.oportunidades
+  for update
+  using (
+    cliente_id = (
+      select cliente_id from public.usuarios
+      where id = auth.uid()
+      limit 1
+    )
+  );
+
+drop policy if exists "oportunidades_delete" on public.oportunidades;
+create policy "oportunidades_delete" on public.oportunidades
+  for delete
+  using (
+    cliente_id = (
+      select cliente_id from public.usuarios
+      where id = auth.uid()
+      limit 1
     )
   );
 

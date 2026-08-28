@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useCRM } from '@/store/crm-store';
-import type { Lead, LeadStatus } from '@/types';
+import type { Lead, LeadStatus, Oportunidade } from '@/types';
 import { hoje, agora } from '@/lib/utils';
 import { dbQuery } from '@/lib/db';
 import { monitor } from '@/lib/monitor';
@@ -93,6 +93,24 @@ export function useLeads() {
           }
           leads = leads.map((l) => ({ ...l, lastContact: latestPerLead[l.id] }));
         }
+
+        // Pré-carrega oportunidades de todos os leads — dashboard/Kanban/gestor
+        // precisam somar por oportunidade de TODOS os leads, não só do que
+        // estiver aberto no painel, então não dá pra carregar sob demanda.
+        const { data: oportData } = await dbQuery(
+          { operation: 'select', table: 'oportunidades', userId: state.currentUser.id, clienteId: cid },
+          () => supabase
+            .from('oportunidades')
+            .select('*')
+            .in('lead_id', ids)
+        ) as { data: Oportunidade[] | null };
+        if (oportData) {
+          const byLead: Record<string, Oportunidade[]> = {};
+          for (const o of oportData) {
+            (byLead[o.lead_id] ??= []).push(o);
+          }
+          leads = leads.map((l) => ({ ...l, oportunidades: byLead[l.id] ?? [] }));
+        }
       }
 
       if (reset) dispatch({ type: 'SET_LEADS', payload: leads });
@@ -152,6 +170,47 @@ export function useLeads() {
     const updatePayload: Record<string, unknown> = { status: novoStatus, status_changed_at: now };
     if (motivo && novoStatus === 'perdido') updatePayload.motivo_perda = motivo;
     await supabase.from('leads').update(updatePayload).eq('id', leadId);
+
+    // Mantém a oportunidade em sincronia com o status do lead — caso comum
+    // (0 ou 1 oportunidade aberta) fecha/perde junto, sem precisar abrir o
+    // painel. Lead com 2+ abertas não deveria chegar aqui: os call sites
+    // (drag do Kanban e StageStepper do painel) bloqueiam antes de chamar
+    // moveLead nesse caso, então não mexemos nas oportunidades ali.
+    if (novoStatus === 'fechado' || novoStatus === 'perdido') {
+      const oportStatus = novoStatus === 'fechado' ? 'fechada' : 'perdida';
+      const todasOport = lead.oportunidades ?? [];
+      const abertas = todasOport.filter((o) => o.status === 'aberta');
+      if (abertas.length === 1) {
+        const o = abertas[0];
+        const patch: Record<string, unknown> = { status: oportStatus, status_changed_at: now };
+        if (motivo && novoStatus === 'perdido') patch.motivo_perda = motivo;
+        await supabase.from('oportunidades').update(patch).eq('id', o.id);
+        dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId: o.id, patch } });
+      } else if (abertas.length === 0 && todasOport.length === 1 && todasOport[0].status !== oportStatus) {
+        // Lead com uma única oportunidade já resolvida (ex: 'fechada') sendo
+        // reclassificado pro outro desfecho (ex: card movido de Fechado pra
+        // Perdido) — resincroniza ela também, senão fica presa no status antigo.
+        const o = todasOport[0];
+        const patch: Record<string, unknown> = { status: oportStatus, status_changed_at: now };
+        if (motivo && novoStatus === 'perdido') patch.motivo_perda = motivo;
+        await supabase.from('oportunidades').update(patch).eq('id', o.id);
+        dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId: o.id, patch } });
+      } else if (abertas.length === 0 && todasOport.length === 0) {
+        // Defensivo: lead criado antes do backfill rodar — cria a oportunidade
+        // única já no status final, espelhando o valor legado do lead.
+        const { data: novaOport } = await supabase.from('oportunidades').insert({
+          lead_id: leadId,
+          cliente_id: lead.cliente_id,
+          valor: lead.valor,
+          status: oportStatus,
+          motivo_perda: motivo && novoStatus === 'perdido' ? motivo : null,
+          criado_por: state.currentUser?.id ?? null,
+          status_changed_at: now,
+        }).select().single() as { data: Oportunidade | null };
+        if (novaOport) dispatch({ type: 'ADD_OPORTUNIDADE', payload: { leadId, oportunidade: novaOport } });
+      }
+    }
+
     const LABELS: Record<string, string> = {
       novo: 'Novo', contato: 'Em contato', proposta: 'Proposta',
       negociacao: 'Negociação', fechado: 'Fechado ✅', perdido: 'Perdido',
@@ -176,7 +235,7 @@ export function useLeads() {
       ...(motivo && novoStatus === 'perdido' ? { motivo_perda: motivo } : {}),
     }});
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
-  }, [state.leads, dispatch]);
+  }, [state.leads, state.currentUser, dispatch]);
 
   // ─── Salvar campo do lead — com whitelist de segurança ───────────────────
 
@@ -199,6 +258,20 @@ export function useLeads() {
       () => supabase.from('leads').update({ [field]: value }).eq('id', leadId)
     );
     dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, [field]: value } });
+
+    // Caso comum (1 oportunidade só): editar o valor do lead mantém a
+    // oportunidade sincronizada, pra não ter dois lugares divergentes.
+    // Lead com 0 ou 2+ oportunidades não mexe aqui — 0 cai no fallback legado
+    // (getLeadValor* já leem `lead.valor` direto nesse caso) e 2+ precisa ser
+    // editado oportunidade por oportunidade dentro do painel.
+    if (field === 'valor') {
+      const todasOport = lead.oportunidades ?? [];
+      if (todasOport.length === 1) {
+        const o = todasOport[0];
+        await supabase.from('oportunidades').update({ valor: value }).eq('id', o.id);
+        dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId: o.id, patch: { valor: value as number | null } } });
+      }
+    }
   }, [state.leads, state.currentUser?.id, dispatch]);
 
   // ─── Criar lead — com validação de todos os campos ───────────────────────
@@ -222,7 +295,24 @@ export function useLeads() {
       () => supabase.from('leads').insert(fields).select().single()
     ) as { data: Lead | null; error: unknown };
     if (error || !data) throw error;
-    const newLead: Lead = { ...data, hist: [] };
+
+    // Cria a oportunidade única do lead desde já — mantém o caso comum
+    // (1 oportunidade) consistente com o backfill dos leads antigos, sem
+    // depender do fallback defensivo em moveLead.
+    const { data: novaOport, error: oportError } = await supabase.from('oportunidades').insert({
+      lead_id: data.id,
+      cliente_id: fields.cliente_id,
+      valor: fields.valor,
+      status: 'aberta',
+      criado_por: state.currentUser?.id ?? null,
+    }).select().single() as { data: Oportunidade | null; error: unknown };
+    if (oportError) {
+      logger.exception('oportunidades.create_lead_error', oportError, {
+        userId: state.currentUser?.id, metadata: { leadId: data.id },
+      });
+    }
+
+    const newLead: Lead = { ...data, hist: [], oportunidades: novaOport ? [novaOport] : [] };
     dispatch({ type: 'ADD_LEAD', payload: newLead });
     const entry = `${hoje()} ${agora()} — Lead cadastrado`;
     await supabase.from('leads_historico').insert({ lead_id: data.id, descricao: entry });

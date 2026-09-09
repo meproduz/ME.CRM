@@ -6,7 +6,7 @@ import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { useOportunidades } from '@/hooks/useOportunidades';
 import { fmtR, isStale, diasAtras, ultimoContato, qualScore, fuStatus, leadData, leadHora, getLeadValor, diasParaResolucao } from '@/lib/utils';
-import { KANBAN_COLS, SEGMENTOS, ORIGENS_GROUPS, ICP_BADGE, MOTIVOS_PERDA, type Lead, type LeadStatus } from '@/types';
+import { KANBAN_COLS, ORIGENS_GROUPS, ICP_BADGE, MOTIVOS_PERDA, type Lead, type LeadStatus } from '@/types';
 
 const OPORT_STATUS_LABEL: Record<string, string> = {
   aberta: 'Em aberto', fechada: 'Fechada ✅', perdida: 'Perdida ❌',
@@ -21,8 +21,6 @@ function miniBtnStyle(color: string): CSSProperties {
 }
 import { exportLeadPDF, exportLeadCSV } from '@/lib/exportLead';
 import ICPModal from '@/components/ICPModal';
-
-const INTERESSES = ['Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700'];
 
 // Atalho rápido de classificação ICP — mesmos campos do diagnóstico completo
 // (icp_score/icp_label), sem precisar responder as 4 perguntas quando o
@@ -233,14 +231,16 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
               <div className="pf-label">Segmento</div>
               <select defaultValue={lead.seg ?? ''} onChange={(e) => updateField(lead.id, 'seg', e.target.value)}>
                 <option value="">Não definido</option>
-                {SEGMENTOS.map((s) => <option key={s}>{s}</option>)}
+                {state.segmentos.map((s) => <option key={s.id}>{s.nome}</option>)}
               </select>
             </div>
             <div className="pf">
               <div className="pf-label">Interesse</div>
               <select defaultValue={lead.int ?? ''} onChange={(e) => updateField(lead.id, 'int', e.target.value)}>
                 <option value="">Não definido</option>
-                {INTERESSES.map((s) => <option key={s}>{s}</option>)}
+                {state.produtos.map((p) => (
+                  <option key={p.id}>{p.nome} - {fmtR(p.valor)}</option>
+                ))}
               </select>
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
-import type { Lead, Usuario, Cliente, Produto, WaTemplates, Oportunidade } from '@/types';
+import type { Lead, Usuario, Cliente, Produto, Segmento, WaTemplates, Oportunidade } from '@/types';
 import { BRAND_NAME } from '@/lib/brand';
 
 const NOME_NEGOCIO = BRAND_NAME ?? 'MeProduz. Studio';
@@ -19,6 +19,7 @@ interface CRMState {
   waTemplate: string;
   waTemplates: WaTemplates;
   produtos: Produto[];
+  segmentos: Segmento[];
   investimentos: Record<string, number>;
   metaMensal: number;
   page: number;
@@ -56,12 +57,11 @@ function getInitialState(): CRMState {
       fechado:    `Olá {nome}! Bem-vindo(a) à família ${NOME_NEGOCIO}! 🎉 Vamos começar?`,
       perdido:    'Olá {nome}! Posso ajudar com alguma dúvida ou apresentar uma nova solução?',
     }),
-    produtos: loadLocalStorage('mp_produtos', [
-      { nome: 'Alicerce',    valor: 1599 },
-      { nome: 'Tração',      valor: 1799 },
-      { nome: 'Expansão',    valor: 3159 },
-      { nome: 'Só tráfego',  valor: 700  },
-    ]),
+    // Carregados do Supabase (tabela produtos/segmentos) no init do layout —
+    // vazio até lá; NovoLeadModal/LeadPanel caem no fallback fixo (SEGMENTOS
+    // em @/types) enquanto isso não chega.
+    produtos: [],
+    segmentos: [],
     // Investimento mensal por canal pago — usado pra calcular ROI real (não só conversão)
     investimentos: loadLocalStorage('mp_investimentos', {} as Record<string, number>),
     metaMensal: 60000,
@@ -89,6 +89,7 @@ type Action =
   | { type: 'SET_WA_TEMPLATE'; payload: string }
   | { type: 'SET_WA_TEMPLATES'; payload: WaTemplates }
   | { type: 'SET_PRODUTOS'; payload: Produto[] }
+  | { type: 'SET_SEGMENTOS'; payload: Segmento[] }
   | { type: 'SET_INVESTIMENTOS'; payload: Record<string, number> }
   | { type: 'SET_META'; payload: number }
   | { type: 'SET_PAGINATION'; payload: { page: number; hasMore: boolean; totalCount: number } }
@@ -115,6 +116,7 @@ function reducer(state: CRMState, action: Action): CRMState {
     case 'SET_WA_TEMPLATE': return { ...state, waTemplate: action.payload };
     case 'SET_WA_TEMPLATES': return { ...state, waTemplates: action.payload };
     case 'SET_PRODUTOS': return { ...state, produtos: action.payload };
+    case 'SET_SEGMENTOS': return { ...state, segmentos: action.payload };
     case 'SET_INVESTIMENTOS': return { ...state, investimentos: action.payload };
     case 'SET_META': return { ...state, metaMensal: action.payload };
     case 'SET_PAGINATION': return { ...state, ...action.payload };

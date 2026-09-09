@@ -5,11 +5,8 @@ import { motion } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 // hoje/agora não são mais necessários — data/hora derivam de created_at no banco
-import { SEGMENTOS, ORIGENS_GROUPS } from '@/types';
-
-const INTERESSES = [
-  'Alicerce - R$ 1.599', 'Tracao - R$ 1.799', 'Expansao - R$ 3.159', 'So trafego - R$ 700',
-];
+import { ORIGENS_GROUPS } from '@/types';
+import { fmtR } from '@/lib/utils';
 
 export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
   const { state } = useCRM();
@@ -96,7 +93,7 @@ export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
           <label>Segmento</label>
           <select value={form.seg} onChange={(e) => set('seg', e.target.value)}>
             <option value="">Selecione</option>
-            {SEGMENTOS.map((s) => <option key={s}>{s}</option>)}
+            {state.segmentos.map((s) => <option key={s.id}>{s.nome}</option>)}
           </select>
         </div>
         <div className="mf">
@@ -113,7 +110,9 @@ export default function NovoLeadModal({ onClose }: { onClose: () => void }) {
           <label>Interesse</label>
           <select value={form.int} onChange={(e) => set('int', e.target.value)}>
             <option value="">Não definido</option>
-            {INTERESSES.map((i) => <option key={i}>{i}</option>)}
+            {state.produtos.map((p) => (
+              <option key={p.id}>{p.nome} - {fmtR(p.valor)}</option>
+            ))}
           </select>
         </div>
         <div className="mf">

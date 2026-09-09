@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
+import { useCatalogo } from '@/hooks/useCatalogo';
 import { supabase } from '@/lib/supabase';
 import { KANBAN_COLS, ORIGENS_GROUPS, type WaTemplates } from '@/types';
 
@@ -12,6 +13,7 @@ const CANAIS_PAGOS = ORIGENS_GROUPS.find((g) => g.label.includes('Tráfego Pago'
 export default function ConfiguracoesPage() {
   const { state, dispatch } = useCRM();
   const { exportCSV, importLeads } = useLeads();
+  const { addProduto, updateProduto, removeProduto, addSegmento, updateSegmento, removeSegmento } = useCatalogo();
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -46,27 +48,6 @@ export default function ConfiguracoesPage() {
     dispatch({ type: 'SET_META', payload: val });
     setMetaStatus('Salvo! ✓');
     setTimeout(() => setMetaStatus(''), 2000);
-  }
-
-  // ─── Produtos ───────────────────────────────────────────────────────────────
-
-  function updateProduto(i: number, field: 'nome' | 'valor', val: string) {
-    const next = state.produtos.map((p, idx) =>
-      idx === i ? { ...p, [field]: field === 'valor' ? Number(val) || 0 : val } : p
-    );
-    dispatch({ type: 'SET_PRODUTOS', payload: next });
-    localStorage.setItem('mp_produtos', JSON.stringify(next));
-  }
-
-  function removeProduto(i: number) {
-    const next = state.produtos.filter((_, idx) => idx !== i);
-    dispatch({ type: 'SET_PRODUTOS', payload: next });
-    localStorage.setItem('mp_produtos', JSON.stringify(next));
-  }
-
-  function addProduto() {
-    const next = [...state.produtos, { nome: '', valor: 0 }];
-    dispatch({ type: 'SET_PRODUTOS', payload: next });
   }
 
   // ─── Investimento por canal ──────────────────────────────────────────────
@@ -175,19 +156,42 @@ export default function ConfiguracoesPage() {
           {/* Produtos */}
           <div className="config-section">
             <div className="config-title">Produtos / Serviços</div>
+            <div className="config-sub" style={{ marginBottom: 14 }}>
+              Aparecem no dropdown de &quot;Interesse&quot; ao criar/editar um lead, e o valor é usado pra calcular receita quando o lead não tem um valor próprio definido.
+            </div>
             <div id="produtos-list">
-              {state.produtos.map((p, i) => (
-                <div key={i} className="prod-item">
-                  <input className="prod-nome" placeholder="Nome do produto" value={p.nome}
-                    onChange={(e) => updateProduto(i, 'nome', e.target.value)} />
-                  <input className="prod-val" placeholder="Valor" type="number" value={p.valor}
-                    onChange={(e) => updateProduto(i, 'valor', e.target.value)} />
-                  <button className="prod-del" onClick={() => removeProduto(i)}>✕</button>
+              {state.produtos.map((p) => (
+                <div key={p.id} className="prod-item">
+                  <input className="prod-nome" placeholder="Nome do produto" defaultValue={p.nome}
+                    onBlur={(e) => { if (p.id && e.target.value !== p.nome) updateProduto(p.id, { nome: e.target.value }); }} />
+                  <input className="prod-val" placeholder="Valor" type="number" defaultValue={p.valor}
+                    onBlur={(e) => { const v = Number(e.target.value) || 0; if (p.id && v !== p.valor) updateProduto(p.id, { valor: v }); }} />
+                  <button className="prod-del" onClick={() => p.id && removeProduto(p.id)}>✕</button>
                 </div>
               ))}
             </div>
             <button className="config-btn" style={{ marginTop: 10, width: '100%' }} onClick={addProduto}>
               + Adicionar produto
+            </button>
+          </div>
+
+          {/* Segmentos */}
+          <div className="config-section">
+            <div className="config-title">Segmentos</div>
+            <div className="config-sub" style={{ marginBottom: 14 }}>
+              Aparecem no dropdown de &quot;Segmento&quot; ao criar/editar um lead.
+            </div>
+            <div id="segmentos-list">
+              {state.segmentos.map((s) => (
+                <div key={s.id} className="prod-item">
+                  <input className="prod-nome" placeholder="Nome do segmento" defaultValue={s.nome}
+                    onBlur={(e) => { if (e.target.value !== s.nome) updateSegmento(s.id, e.target.value); }} />
+                  <button className="prod-del" onClick={() => removeSegmento(s.id)}>✕</button>
+                </div>
+              ))}
+            </div>
+            <button className="config-btn" style={{ marginTop: 10, width: '100%' }} onClick={addSegmento}>
+              + Adicionar segmento
             </button>
           </div>
 

@@ -10,7 +10,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { logger } from '@/lib/logger';
 import { monitor } from '@/lib/monitor';
 import { alertManager } from '@/lib/alerts';
-import type { Oportunidade } from '@/types';
+import type { Oportunidade, Produto } from '@/types';
+import { setValMap } from '@/types';
 
 function CRMInner({ children }: { children: React.ReactNode }) {
   const { dispatch } = useCRM();
@@ -67,6 +68,18 @@ function CRMInner({ children }: { children: React.ReactNode }) {
       const { data: cliente } = await supabase
         .from('clientes').select('*').eq('id', usuario.cliente_id).single();
       if (cliente) dispatch({ type: 'SET_CLIENTE', payload: cliente });
+
+      // Catálogo (Segmentos e Produtos/Serviços) — fonte real dos dropdowns
+      // de Segmento/Interesse no lead, controlada em Configurações.
+      const { data: produtos } = await supabase
+        .from('produtos').select('*').eq('cliente_id', usuario.cliente_id).order('ordem', { ascending: true });
+      if (produtos) {
+        dispatch({ type: 'SET_PRODUTOS', payload: produtos as Produto[] });
+        setValMap(produtos as Produto[]);
+      }
+      const { data: segmentos } = await supabase
+        .from('segmentos').select('*').eq('cliente_id', usuario.cliente_id).order('ordem', { ascending: true });
+      if (segmentos) dispatch({ type: 'SET_SEGMENTOS', payload: segmentos });
 
       const { data: leads, count } = await supabase
         .from('leads')

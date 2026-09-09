@@ -96,8 +96,16 @@ export interface Cliente {
 }
 
 export interface Produto {
+  id?: string;
   nome: string;
   valor: number;
+  ordem?: number;
+}
+
+export interface Segmento {
+  id: string;
+  nome: string;
+  ordem?: number;
 }
 
 export interface WaTemplates {
@@ -195,3 +203,12 @@ export const VAL: Record<string, number> = {
   'Expansao':    3159,
   'So trafego':  700,
 };
+
+/** Repopula VAL a partir dos produtos carregados do banco (Configurações),
+ *  mutando o mesmo objeto em vez de reatribuir — assim os ~12 lugares que
+ *  chamam getLeadValor(lead) com o valor padrão de VAL continuam
+ *  funcionando sem precisar passar o mapa explicitamente em cada um. */
+export function setValMap(produtos: { nome: string; valor: number }[]): void {
+  Object.keys(VAL).forEach((k) => delete VAL[k]);
+  produtos.forEach((p) => { if (p.nome) VAL[p.nome] = p.valor; });
+}

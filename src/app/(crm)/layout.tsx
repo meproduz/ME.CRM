@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { logger } from '@/lib/logger';
 import { monitor } from '@/lib/monitor';
 import { alertManager } from '@/lib/alerts';
+import type { Oportunidade } from '@/types';
 
 function CRMInner({ children }: { children: React.ReactNode }) {
   const { dispatch } = useCRM();
@@ -71,12 +72,19 @@ function CRMInner({ children }: { children: React.ReactNode }) {
         .from('leads')
         .select('*', { count: 'exact' })
         .eq('cliente_id', usuario.cliente_id)
+        .is('deletado_em', null)
         .order('created_at', { ascending: false })
         .range(0, 49);
 
       if (leads) {
         // Pré-carrega o último histórico de cada lead para stale detection
         let latestPerLead: Record<string, string> = {};
+        // Pré-carrega oportunidades de todos os leads — espelha o mesmo preload
+        // de useLeads.ts:loadLeads(). Necessário aqui também porque esta carga
+        // inicial roda primeiro e preenche state.leads antes de loadLeads ter
+        // chance de rodar (state.leads.length já não é mais 0), então sem isso
+        // o app inteiro nunca vê as oportunidades reais — só o valor legado.
+        let oportPorLead: Record<string, Oportunidade[]> = {};
         if (leads.length > 0) {
           const ids = leads.map((l: { id: string }) => l.id);
           const { data: histData } = await supabase
@@ -89,9 +97,21 @@ function CRMInner({ children }: { children: React.ReactNode }) {
               if (!latestPerLead[h.lead_id]) latestPerLead[h.lead_id] = h.descricao;
             }
           }
+
+          const { data: oportData } = await supabase
+            .from('oportunidades')
+            .select('*')
+            .in('lead_id', ids);
+          if (oportData) {
+            for (const o of oportData as Oportunidade[]) {
+              (oportPorLead[o.lead_id] ??= []).push(o);
+            }
+          }
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dispatch({ type: 'SET_LEADS', payload: leads.map((l: any) => ({ ...l, hist: [], lastContact: latestPerLead[l.id] })) });
+        dispatch({ type: 'SET_LEADS', payload: leads.map((l: { id: string } & Record<string, unknown>) => ({
+          ...l, hist: [], lastContact: latestPerLead[l.id], oportunidades: oportPorLead[l.id] ?? [],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }) as any) });
         dispatch({ type: 'SET_PAGINATION', payload: { page: 1, hasMore: leads.length === 50, totalCount: count ?? 0 } });
       }
 

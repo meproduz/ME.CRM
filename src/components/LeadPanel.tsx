@@ -36,7 +36,7 @@ const TEMPERATURAS = [
 export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const { state } = useCRM();
   const { loadHist, addNota, moveLead, updateField, deleteLead, setFollowup, saveICP } = useLeads();
-  const { addOportunidade, closeOportunidade, loseOportunidade } = useOportunidades();
+  const { addOportunidade, closeOportunidade, loseOportunidade, reabrirOportunidade, updateOportunidade } = useOportunidades();
 
   const [nota, setNota] = useState('');
   const [fuDate, setFuDate] = useState(lead.followup ?? '');
@@ -49,6 +49,9 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
   const [perdaOportId, setPerdaOportId] = useState<string | null>(null);
   const [perdaOportMotivo, setPerdaOportMotivo] = useState('');
   const [perdaOportObs, setPerdaOportObs] = useState('');
+  const [editOportId, setEditOportId] = useState<string | null>(null);
+  const [editOportNome, setEditOportNome] = useState('');
+  const [editOportValor, setEditOportValor] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [showICP, setShowICP]         = useState(false);
@@ -117,6 +120,24 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
     }
     await addOportunidade(lead.id, { nome: novaOportNome.trim() || null, valor });
     setNovaOportNome(''); setNovaOportValor(''); setNovaOportOpen(false);
+  }
+
+  function startEditOport(o: { id: string; nome: string | null; valor: number | null }) {
+    setEditOportId(o.id);
+    setEditOportNome(o.nome ?? '');
+    setEditOportValor(o.valor != null ? String(o.valor) : '');
+  }
+
+  async function handleSaveEditOport() {
+    if (!editOportId) return;
+    const trimmed = editOportValor.trim();
+    let valorOport: number | null = null;
+    if (trimmed !== '') {
+      const n = Number(trimmed.replace(/\./g, '').replace(',', '.'));
+      valorOport = isNaN(n) ? null : n;
+    }
+    await updateOportunidade(lead.id, editOportId, { nome: editOportNome.trim() || null, valor: valorOport });
+    setEditOportId(null);
   }
 
   async function handleConfirmarPerdaOport() {
@@ -348,25 +369,44 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                 <div className="plabel" style={{ marginBottom: 8 }}>Oportunidades</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
                   {oportunidades.map((o) => (
-                    <div key={o.id} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                      padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8,
-                    }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {o.nome || 'Oportunidade'}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                          {fmtR(o.valor)} · {OPORT_STATUS_LABEL[o.status]}
+                    editOportId === o.id ? (
+                      <div key={o.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 10, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                        <input placeholder="Nome" value={editOportNome} onChange={(e) => setEditOportNome(e.target.value)} />
+                        <input type="number" placeholder="Valor (R$)" value={editOportValor} onChange={(e) => setEditOportValor(e.target.value)} />
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="msbtn" style={{ flex: 1 }} onClick={handleSaveEditOport}>Salvar</button>
+                          <button className="mcbtn" style={{ flex: 1 }} onClick={() => setEditOportId(null)}>Cancelar</button>
                         </div>
                       </div>
-                      {o.status === 'aberta' && (
+                    ) : (
+                      <div key={o.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                        padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8,
+                      }}>
+                        <button
+                          onClick={() => startEditOport(o)}
+                          title="Editar nome/valor"
+                          style={{ minWidth: 0, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                        >
+                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {o.nome || 'Oportunidade'} <span style={{ opacity: 0.5, fontWeight: 400 }}>✎</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                            {fmtR(o.valor)} · {OPORT_STATUS_LABEL[o.status]}
+                          </div>
+                        </button>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button onClick={() => closeOportunidade(lead.id, o.id)} style={miniBtnStyle('#22C55E')}>Fechar</button>
-                          <button onClick={() => { setPerdaOportId(o.id); setPerdaOportMotivo(''); setPerdaOportObs(''); }} style={miniBtnStyle('#E24B4A')}>Perder</button>
+                          {o.status === 'aberta' ? (
+                            <>
+                              <button onClick={() => closeOportunidade(lead.id, o.id)} style={miniBtnStyle('#22C55E')}>Fechar</button>
+                              <button onClick={() => { setPerdaOportId(o.id); setPerdaOportMotivo(''); setPerdaOportObs(''); }} style={miniBtnStyle('#E24B4A')}>Perder</button>
+                            </>
+                          ) : (
+                            <button onClick={() => reabrirOportunidade(lead.id, o.id)} style={miniBtnStyle('#F59E0B')}>Reabrir</button>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )
                   ))}
                 </div>
               </>

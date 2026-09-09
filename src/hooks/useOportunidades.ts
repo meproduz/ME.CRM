@@ -32,15 +32,16 @@ export function useOportunidades() {
 
     const novoStatus = todas.some((o) => o.status === 'fechada') ? 'fechado' : 'perdido';
     const now = new Date().toISOString();
+    const autor = state.currentUser?.nome ?? 'Desconhecido';
     await supabase.from('leads').update({ status: novoStatus, status_changed_at: now }).eq('id', leadId);
     await supabase.from('leads_historico').insert({
       lead_id: leadId,
-      descricao: `${hoje()} ${agora()} — Movido para ${novoStatus === 'fechado' ? 'Fechado ✅' : 'Perdido'} (última oportunidade resolvida)`,
+      descricao: `${hoje()} ${agora()} · ${autor} — Movido para ${novoStatus === 'fechado' ? 'Fechado ✅' : 'Perdido'} (última oportunidade resolvida)`,
       tipo: 'status_change',
-      meta_json: { from: lead.status, to: novoStatus, at: now },
+      meta_json: { from: lead.status, to: novoStatus, at: now, by: state.currentUser?.id ?? null, by_nome: autor },
     });
     dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, status: novoStatus, status_changed_at: now, oportunidades: todas } });
-  }, [state.leads, dispatch]);
+  }, [state.leads, state.currentUser, dispatch]);
 
   const addOportunidade = useCallback(async (leadId: string, fields: { nome: string | null; valor: number | null }) => {
     const lead = state.leads.find((l) => l.id === leadId);
@@ -65,11 +66,11 @@ export function useOportunidades() {
     }
 
     dispatch({ type: 'ADD_OPORTUNIDADE', payload: { leadId, oportunidade: data } });
-    const entry = `💼 ${hoje()} ${agora()} — Oportunidade adicionada${fields.nome ? `: ${fields.nome}` : ''}${fields.valor ? ` (${fmtR(fields.valor)})` : ''}`;
+    const entry = `💼 ${hoje()} ${agora()} · ${state.currentUser?.nome ?? 'Desconhecido'} — Oportunidade adicionada${fields.nome ? `: ${fields.nome}` : ''}${fields.valor ? ` (${fmtR(fields.valor)})` : ''}`;
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
     return data;
-  }, [state.leads, state.currentUser?.id, dispatch]);
+  }, [state.leads, state.currentUser, dispatch]);
 
   const closeOportunidade = useCallback(async (leadId: string, oportunidadeId: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
@@ -89,11 +90,11 @@ export function useOportunidades() {
     }
 
     dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId, patch } });
-    const entry = `✅ ${hoje()} ${agora()} — Oportunidade fechada${oport?.nome ? `: ${oport.nome}` : ''}${oport?.valor ? ` (${fmtR(oport.valor)})` : ''}`;
+    const entry = `✅ ${hoje()} ${agora()} · ${state.currentUser?.nome ?? 'Desconhecido'} — Oportunidade fechada${oport?.nome ? `: ${oport.nome}` : ''}${oport?.valor ? ` (${fmtR(oport.valor)})` : ''}`;
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
     await syncLeadStatusSeResolvido(leadId, oportunidadeId, 'fechada');
-  }, [state.leads, state.currentUser?.id, dispatch, syncLeadStatusSeResolvido]);
+  }, [state.leads, state.currentUser, dispatch, syncLeadStatusSeResolvido]);
 
   const loseOportunidade = useCallback(async (leadId: string, oportunidadeId: string, motivo: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
@@ -113,11 +114,78 @@ export function useOportunidades() {
     }
 
     dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId, patch } });
-    const entry = `❌ ${hoje()} ${agora()} — Oportunidade perdida${oport?.nome ? `: ${oport.nome}` : ''} — Motivo: ${motivo}`;
+    const entry = `❌ ${hoje()} ${agora()} · ${state.currentUser?.nome ?? 'Desconhecido'} — Oportunidade perdida${oport?.nome ? `: ${oport.nome}` : ''} — Motivo: ${motivo}`;
     await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
     dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
     await syncLeadStatusSeResolvido(leadId, oportunidadeId, 'perdida');
-  }, [state.leads, state.currentUser?.id, dispatch, syncLeadStatusSeResolvido]);
+  }, [state.leads, state.currentUser, dispatch, syncLeadStatusSeResolvido]);
+
+  // Reabre uma oportunidade fechada/perdida — cliente voltou atrás, ou clicou
+  // no botão errado. Se o lead já tinha virado Fechado/Perdido por causa dela
+  // ser a última pendente, volta pra Negociação — não faz sentido continuar
+  // "resolvido" com uma oportunidade de novo em aberto.
+  const reabrirOportunidade = useCallback(async (leadId: string, oportunidadeId: string) => {
+    const lead = state.leads.find((l) => l.id === leadId);
+    const oport = lead?.oportunidades?.find((o) => o.id === oportunidadeId);
+    const now = new Date().toISOString();
+    const patch = { status: 'aberta' as const, status_changed_at: now, motivo_perda: null };
+
+    const { error } = await dbQuery(
+      { operation: 'update', table: 'oportunidades', userId: state.currentUser?.id, clienteId: lead?.cliente_id },
+      () => supabase.from('oportunidades').update(patch).eq('id', oportunidadeId)
+    ) as { error: unknown };
+
+    if (error) {
+      logger.exception('oportunidades.reopen_error', error, { userId: state.currentUser?.id, metadata: { leadId, oportunidadeId } });
+      alert('Não foi possível reabrir a oportunidade.');
+      return;
+    }
+
+    const autor = state.currentUser?.nome ?? 'Desconhecido';
+    dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId, patch } });
+    const entry = `↩️ ${hoje()} ${agora()} · ${autor} — Oportunidade reaberta${oport?.nome ? `: ${oport.nome}` : ''}`;
+    await supabase.from('leads_historico').insert({ lead_id: leadId, descricao: entry });
+    dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry } });
+
+    if (lead && (lead.status === 'fechado' || lead.status === 'perdido')) {
+      const leadNow = new Date().toISOString();
+      await supabase.from('leads').update({ status: 'negociacao', status_changed_at: leadNow }).eq('id', leadId);
+      const leadEntry = `${hoje()} ${agora()} · ${autor} — Movido para Negociação (oportunidade reaberta)`;
+      await supabase.from('leads_historico').insert({
+        lead_id: leadId, descricao: leadEntry, tipo: 'status_change',
+        meta_json: { from: lead.status, to: 'negociacao', at: leadNow, by: state.currentUser?.id ?? null, by_nome: autor },
+      });
+      // Usa a oportunidade já reaberta (não o `lead` capturado no início da
+      // função, que ainda está com o status antigo dela) — senão esse dispatch
+      // sobrescreve e desfaz o UPDATE_OPORTUNIDADE de cima.
+      const oportunidadesAtualizadas = (lead.oportunidades ?? []).map((o) =>
+        o.id === oportunidadeId ? { ...o, ...patch } : o
+      );
+      dispatch({ type: 'UPDATE_LEAD', payload: { ...lead, status: 'negociacao', status_changed_at: leadNow, oportunidades: oportunidadesAtualizadas } });
+      dispatch({ type: 'ADD_HIST_ENTRY', payload: { leadId, entry: leadEntry } });
+    }
+  }, [state.leads, state.currentUser, dispatch]);
+
+  // Corrige nome/valor digitados errado — não mexe em status, então não
+  // registra na timeline (é uma correção, não um evento de negócio).
+  const updateOportunidade = useCallback(async (
+    leadId: string, oportunidadeId: string, fields: { nome?: string | null; valor?: number | null }
+  ) => {
+    const lead = state.leads.find((l) => l.id === leadId);
+
+    const { error } = await dbQuery(
+      { operation: 'update', table: 'oportunidades', userId: state.currentUser?.id, clienteId: lead?.cliente_id },
+      () => supabase.from('oportunidades').update(fields).eq('id', oportunidadeId)
+    ) as { error: unknown };
+
+    if (error) {
+      logger.exception('oportunidades.update_error', error, { userId: state.currentUser?.id, metadata: { leadId, oportunidadeId } });
+      alert('Não foi possível salvar a oportunidade.');
+      return;
+    }
+
+    dispatch({ type: 'UPDATE_OPORTUNIDADE', payload: { leadId, oportunidadeId, patch: fields } });
+  }, [state.leads, state.currentUser?.id, dispatch]);
 
   const deleteOportunidade = useCallback(async (leadId: string, oportunidadeId: string) => {
     const lead = state.leads.find((l) => l.id === leadId);
@@ -137,5 +205,5 @@ export function useOportunidades() {
     dispatch({ type: 'SET_OPORTUNIDADES', payload: { leadId, oportunidades } });
   }, [state.leads, state.currentUser?.id, dispatch]);
 
-  return { addOportunidade, closeOportunidade, loseOportunidade, deleteOportunidade };
+  return { addOportunidade, closeOportunidade, loseOportunidade, reabrirOportunidade, updateOportunidade, deleteOportunidade };
 }

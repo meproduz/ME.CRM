@@ -160,7 +160,7 @@ function RadarChart({ answers }: { answers: Required<Answers> }) {
       {/* Data polygon */}
       <polygon
         points={dataPts.map(p => p.join(',')).join(' ')}
-        fill="rgba(201,162,39,0.18)" stroke="#C9A227" strokeWidth="1.5" />
+        fill="rgba(var(--gold-rgb),0.18)" stroke="var(--gold)" strokeWidth="1.5" />
       {/* Dots */}
       {dataPts.map((p, i) => (
         <circle key={i} cx={p[0]} cy={p[1]} r="4" fill={DIMS[i].color} />
@@ -264,16 +264,16 @@ export default function ICPModal({ leadNome, existingScore, existingLabel, onCon
                         style={{
                           display: 'flex', alignItems: 'flex-start', gap: 10,
                           padding: '10px 12px',
-                          background: selected ? 'rgba(201,162,39,0.07)' : 'rgba(255,255,255,0.025)',
-                          border: `1px solid ${selected ? 'rgba(201,162,39,0.45)' : 'rgba(255,255,255,0.07)'}`,
+                          background: selected ? 'rgba(var(--gold-rgb),0.07)' : 'rgba(255,255,255,0.025)',
+                          border: `1px solid ${selected ? 'rgba(var(--gold-rgb),0.45)' : 'rgba(255,255,255,0.07)'}`,
                           borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
                         }}
                         onClick={() => setAnswers(a => ({ ...a, [d.key]: o.value }))}
                       >
                         <div style={{
                           width: 14, height: 14, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-                          background: selected ? '#C9A227' : 'transparent',
-                          border: `2px solid ${selected ? '#C9A227' : 'rgba(255,255,255,0.2)'}`,
+                          background: selected ? 'var(--gold)' : 'transparent',
+                          border: `2px solid ${selected ? 'var(--gold)' : 'rgba(255,255,255,0.2)'}`,
                           transition: 'all 0.15s',
                         }} />
                         <span style={{ fontSize: 12.5, color: selected ? 'var(--text)' : 'var(--text2)', lineHeight: 1.45 }}>

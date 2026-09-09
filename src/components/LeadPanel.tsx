@@ -40,6 +40,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
 
   const [nota, setNota] = useState('');
   const [fuDate, setFuDate] = useState(lead.followup ?? '');
+  const [fuDatePart, fuTimePart] = fuDate ? (fuDate.includes('T') ? fuDate.split('T') : [fuDate, '']) : ['', ''];
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [perdaMotivo, setPerdaMotivo] = useState('');
   const [perdaObs, setPerdaObs] = useState('');
@@ -439,9 +440,19 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
           <div className="p-fu-wrap">
             <div className="plabel">Próximo follow-up</div>
             <div className="p-fu-row">
-              <input type="datetime-local" className="p-fu-input" value={fuDate}
-                onChange={(e) => setFuDate(e.target.value)}
-                onBlur={(e) => setFollowup(lead.id, e.target.value || null)} />
+              <input type="date" className="p-fu-input" value={fuDatePart}
+                onChange={(e) => {
+                  const combined = e.target.value ? (fuTimePart ? `${e.target.value}T${fuTimePart}` : e.target.value) : '';
+                  setFuDate(combined);
+                  setFollowup(lead.id, combined || null);
+                }} />
+              <input type="time" className="p-fu-input" value={fuTimePart} disabled={!fuDatePart}
+                onChange={(e) => {
+                  if (!fuDatePart) return;
+                  const combined = e.target.value ? `${fuDatePart}T${e.target.value}` : fuDatePart;
+                  setFuDate(combined);
+                  setFollowup(lead.id, combined || null);
+                }} />
               <button className="p-fu-clear" onClick={() => { setFuDate(''); setFollowup(lead.id, null); }}>✕ Limpar</button>
             </div>
             {fuSt && <div style={{ fontSize: 10, marginTop: 4, color: fuSt.color }}>{fuSt.text}</div>}

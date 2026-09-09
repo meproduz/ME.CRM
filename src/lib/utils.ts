@@ -195,7 +195,12 @@ export function fuStatus(followup: string | null): { text: string; color: string
   const fd = parseFollowup(followup);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((fd.getTime() - today.getTime()) / 86400000);
+  // Diferença em dias de calendário — zera a hora dos dois lados antes de
+  // dividir, senão um horário à tarde (ex: amanhã 14h) soma mais de 24h em
+  // milissegundos e o Math.ceil conta um dia extra que não existe.
+  const fdMidnight = new Date(fd);
+  fdMidnight.setHours(0, 0, 0, 0);
+  const diff = Math.round((fdMidnight.getTime() - today.getTime()) / 86400000);
   if (diff < 0) return { text: `⚠️ Vencido há ${-diff} dia${-diff > 1 ? 's' : ''}`, color: 'var(--red)' };
   if (diff === 0) return { text: `📅 Hoje${followup.includes('T') ? ` às ${fmtFollowup(followup).split(' ')[1]}` : ''}!`, color: 'var(--accent)' };
   return { text: `✓ Em ${diff} dia${diff > 1 ? 's' : ''}`, color: 'var(--green)' };

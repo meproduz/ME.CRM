@@ -14,6 +14,26 @@ import { logger } from '@/lib/logger';
 // Antes disso, "Produtos/Serviços" em Configurações só escrevia no
 // localStorage — sem nenhum consumidor real no resto do app.
 
+function nextOrdem(items: { ordem?: number }[]): number {
+  return items.length === 0 ? 0 : Math.max(...items.map((i) => i.ordem ?? 0)) + 1;
+}
+
+// Depois de arrastar (framer-motion Reorder já entrega o array na nova
+// ordem), reatribui `ordem` = posição no array e devolve só os itens cuja
+// ordem de fato mudou — pra não escrever no banco o que ficou igual.
+function reorderWithOrdem<T extends { id?: string; ordem?: number }>(
+  newOrder: T[]
+): { next: T[]; changed: T[] } {
+  const changed: T[] = [];
+  const next = newOrder.map((item, i) => {
+    if (item.ordem === i) return item;
+    const updated = { ...item, ordem: i };
+    changed.push(updated);
+    return updated;
+  });
+  return { next, changed };
+}
+
 export function useCatalogo() {
   const { state, dispatch } = useCRM();
   const clienteId = state.currentUser?.cliente_id;
@@ -25,7 +45,7 @@ export function useCatalogo() {
     const { data, error } = await dbQuery(
       { operation: 'insert', table: 'produtos', userId: state.currentUser?.id, clienteId },
       () => supabase.from('produtos')
-        .insert({ cliente_id: clienteId, nome: '', valor: 0, ordem: state.produtos.length })
+        .insert({ cliente_id: clienteId, nome: '', valor: 0, ordem: nextOrdem(state.produtos) })
         .select().single()
     ) as { data: Produto | null; error: unknown };
     if (error || !data) { logger.exception('produtos.add_error', error); return; }
@@ -54,6 +74,17 @@ export function useCatalogo() {
     if (error) logger.exception('produtos.remove_error', error, { metadata: { id } });
   }, [state.produtos, state.currentUser?.id, clienteId, dispatch]);
 
+  const reorderProdutos = useCallback(async (newOrder: Produto[]) => {
+    const { next, changed } = reorderWithOrdem(newOrder);
+    dispatch({ type: 'SET_PRODUTOS', payload: next });
+    setValMap(next);
+    const results = await Promise.all(
+      changed.map((p) => supabase.from('produtos').update({ ordem: p.ordem }).eq('id', p.id))
+    );
+    const err = results.find((r) => r.error)?.error;
+    if (err) logger.exception('produtos.reorder_error', err);
+  }, [dispatch]);
+
   // ── Segmentos ───────────────────────────────────────────────────────────
 
   const addSegmento = useCallback(async () => {
@@ -61,7 +92,7 @@ export function useCatalogo() {
     const { data, error } = await dbQuery(
       { operation: 'insert', table: 'segmentos', userId: state.currentUser?.id, clienteId },
       () => supabase.from('segmentos')
-        .insert({ cliente_id: clienteId, nome: '', ordem: state.segmentos.length })
+        .insert({ cliente_id: clienteId, nome: '', ordem: nextOrdem(state.segmentos) })
         .select().single()
     ) as { data: Segmento | null; error: unknown };
     if (error || !data) { logger.exception('segmentos.add_error', error); return; }
@@ -88,5 +119,18 @@ export function useCatalogo() {
     if (error) logger.exception('segmentos.remove_error', error, { metadata: { id } });
   }, [state.segmentos, state.currentUser?.id, clienteId, dispatch]);
 
-  return { addProduto, updateProduto, removeProduto, addSegmento, updateSegmento, removeSegmento };
+  const reorderSegmentos = useCallback(async (newOrder: Segmento[]) => {
+    const { next, changed } = reorderWithOrdem(newOrder);
+    dispatch({ type: 'SET_SEGMENTOS', payload: next });
+    const results = await Promise.all(
+      changed.map((s) => supabase.from('segmentos').update({ ordem: s.ordem }).eq('id', s.id))
+    );
+    const err = results.find((r) => r.error)?.error;
+    if (err) logger.exception('segmentos.reorder_error', err);
+  }, [dispatch]);
+
+  return {
+    addProduto, updateProduto, removeProduto, reorderProdutos,
+    addSegmento, updateSegmento, removeSegmento, reorderSegmentos,
+  };
 }

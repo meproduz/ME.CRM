@@ -2,18 +2,71 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Reorder, useDragControls } from 'framer-motion';
 import { useCRM } from '@/store/crm-store';
 import { useLeads } from '@/hooks/useLeads';
 import { useCatalogo } from '@/hooks/useCatalogo';
 import { supabase } from '@/lib/supabase';
-import { KANBAN_COLS, ORIGENS_GROUPS, type WaTemplates } from '@/types';
+import { KANBAN_COLS, ORIGENS_GROUPS, type WaTemplates, type Produto, type Segmento } from '@/types';
 
 const CANAIS_PAGOS = ORIGENS_GROUPS.find((g) => g.label.includes('Tráfego Pago'))?.items ?? [];
+
+// Alça de arrastar — dragListener desligado no Reorder.Item porque a linha
+// tem inputs de texto clicáveis; sem isso, clicar pra editar já iniciaria
+// um drag. Só essa alça (via dragControls.start) dispara o arrasto.
+function DragHandle({ onStart }: { onStart: (e: React.PointerEvent) => void }) {
+  return (
+    <div className="prod-drag" onPointerDown={onStart}>
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+        <circle cx="2" cy="2" r="1.4"/><circle cx="8" cy="2" r="1.4"/>
+        <circle cx="2" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/>
+        <circle cx="2" cy="14" r="1.4"/><circle cx="8" cy="14" r="1.4"/>
+      </svg>
+    </div>
+  );
+}
+
+function ProdutoRow({ p, updateProduto, removeProduto }: {
+  p: Produto;
+  updateProduto: (id: string, patch: Partial<Produto>) => void;
+  removeProduto: (id: string) => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item as="div" value={p} dragListener={false} dragControls={controls} className="prod-item">
+      <DragHandle onStart={(e) => controls.start(e)} />
+      <input className="prod-nome" placeholder="Nome do produto" defaultValue={p.nome}
+        onBlur={(e) => { if (p.id && e.target.value !== p.nome) updateProduto(p.id, { nome: e.target.value }); }} />
+      <input className="prod-val" placeholder="Valor" type="number" defaultValue={p.valor}
+        onBlur={(e) => { const v = Number(e.target.value) || 0; if (p.id && v !== p.valor) updateProduto(p.id, { valor: v }); }} />
+      <button className="prod-del" onClick={() => p.id && removeProduto(p.id)}>✕</button>
+    </Reorder.Item>
+  );
+}
+
+function SegmentoRow({ s, updateSegmento, removeSegmento }: {
+  s: Segmento;
+  updateSegmento: (id: string, nome: string) => void;
+  removeSegmento: (id: string) => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item as="div" value={s} dragListener={false} dragControls={controls} className="prod-item">
+      <DragHandle onStart={(e) => controls.start(e)} />
+      <input className="prod-nome" placeholder="Nome do segmento" defaultValue={s.nome}
+        onBlur={(e) => { if (e.target.value !== s.nome) updateSegmento(s.id, e.target.value); }} />
+      <button className="prod-del" onClick={() => removeSegmento(s.id)}>✕</button>
+    </Reorder.Item>
+  );
+}
 
 export default function ConfiguracoesPage() {
   const { state, dispatch } = useCRM();
   const { exportCSV, importLeads } = useLeads();
-  const { addProduto, updateProduto, removeProduto, addSegmento, updateSegmento, removeSegmento } = useCatalogo();
+  const {
+    addProduto, updateProduto, removeProduto, reorderProdutos,
+    addSegmento, updateSegmento, removeSegmento, reorderSegmentos,
+  } = useCatalogo();
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -159,17 +212,11 @@ export default function ConfiguracoesPage() {
             <div className="config-sub" style={{ marginBottom: 14 }}>
               Aparecem no dropdown de &quot;Interesse&quot; ao criar/editar um lead, e o valor é usado pra calcular receita quando o lead não tem um valor próprio definido.
             </div>
-            <div id="produtos-list">
+            <Reorder.Group as="div" axis="y" values={state.produtos} onReorder={reorderProdutos} id="produtos-list">
               {state.produtos.map((p) => (
-                <div key={p.id} className="prod-item">
-                  <input className="prod-nome" placeholder="Nome do produto" defaultValue={p.nome}
-                    onBlur={(e) => { if (p.id && e.target.value !== p.nome) updateProduto(p.id, { nome: e.target.value }); }} />
-                  <input className="prod-val" placeholder="Valor" type="number" defaultValue={p.valor}
-                    onBlur={(e) => { const v = Number(e.target.value) || 0; if (p.id && v !== p.valor) updateProduto(p.id, { valor: v }); }} />
-                  <button className="prod-del" onClick={() => p.id && removeProduto(p.id)}>✕</button>
-                </div>
+                <ProdutoRow key={p.id} p={p} updateProduto={updateProduto} removeProduto={removeProduto} />
               ))}
-            </div>
+            </Reorder.Group>
             <button className="config-btn" style={{ marginTop: 10, width: '100%' }} onClick={addProduto}>
               + Adicionar produto
             </button>
@@ -181,15 +228,11 @@ export default function ConfiguracoesPage() {
             <div className="config-sub" style={{ marginBottom: 14 }}>
               Aparecem no dropdown de &quot;Segmento&quot; ao criar/editar um lead.
             </div>
-            <div id="segmentos-list">
+            <Reorder.Group as="div" axis="y" values={state.segmentos} onReorder={reorderSegmentos} id="segmentos-list">
               {state.segmentos.map((s) => (
-                <div key={s.id} className="prod-item">
-                  <input className="prod-nome" placeholder="Nome do segmento" defaultValue={s.nome}
-                    onBlur={(e) => { if (e.target.value !== s.nome) updateSegmento(s.id, e.target.value); }} />
-                  <button className="prod-del" onClick={() => removeSegmento(s.id)}>✕</button>
-                </div>
+                <SegmentoRow key={s.id} s={s} updateSegmento={updateSegmento} removeSegmento={removeSegmento} />
               ))}
-            </div>
+            </Reorder.Group>
             <button className="config-btn" style={{ marginTop: 10, width: '100%' }} onClick={addSegmento}>
               + Adicionar segmento
             </button>

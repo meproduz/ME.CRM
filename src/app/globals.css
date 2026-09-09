@@ -1510,6 +1510,15 @@ input:-webkit-autofill:focus {
   flex-shrink: 0;
 }
 .prod-del:hover { background: rgba(240,71,71,0.15); }
+.prod-drag {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; flex-shrink: 0;
+  color: var(--text3);
+  cursor: grab;
+  touch-action: none;
+}
+.prod-drag:hover { color: var(--gold); }
+.prod-drag:active { cursor: grabbing; }
 
 /* CSV */
 .csv-drop {

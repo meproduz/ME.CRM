@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useCRM } from '@/store/crm-store';
-import { fmtR, diasAtras, leadData, getLeadValor } from '@/lib/utils';
+import { fmtR, diasAtras, leadData, getLeadValorFechado } from '@/lib/utils';
 import { KANBAN_COLS, ORIGENS, ORIG_COLORS, VAL } from '@/types';
 
 type Periodo = 'semana' | 'mes' | 'trim' | 'total';
@@ -35,7 +35,9 @@ export default function RelatoriosPage() {
   const stats = useMemo(() => {
     const fechados = fl.filter((l) => l.status === 'fechado');
     const perdidos = fl.filter((l) => l.status === 'perdido');
-    const mrr = fechados.reduce((a, l) => a + getLeadValor(l), 0);
+    // Soma por oportunidade fechada, não por lead — um lead misto (parte
+    // fechada, parte ainda aberta) contribui só com a parte já fechada.
+    const mrr = fl.reduce((a, l) => a + getLeadValorFechado(l), 0);
     const conv = fl.length ? Math.round((fechados.length / fl.length) * 100) : 0;
     const tmMed = fl.length > 0 ? Math.round(fl.reduce((a, l) => a + diasAtras(leadData(l)), 0) / fl.length) : 0;
     return { fechados, perdidos, mrr, conv, tmMed };

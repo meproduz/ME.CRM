@@ -316,7 +316,7 @@ export default function GestorPage() {
 
                   {/* Background track */}
                   <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
-                    fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={swg} strokeLinecap="round"/>
+                    fill="none" stroke="rgba(var(--fg-rgb),0.07)" strokeWidth={swg} strokeLinecap="round"/>
 
                   {/* Inner depth shadow — 3D concave feel */}
                   <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
@@ -337,7 +337,7 @@ export default function GestorPage() {
                   {/* Specular sheen — glass/3D effect */}
                   {pctMeta > 4 && (
                     <path d={`M ${cxg-Rg},${cyg} A ${Rg},${Rg} 0 0,1 ${cxg+Rg},${cyg}`}
-                      fill="none" stroke="rgba(255,255,255,0.23)" strokeWidth={swg / 3.5} strokeLinecap="round"
+                      fill="none" stroke="rgba(var(--fg-rgb),0.23)" strokeWidth={swg / 3.5} strokeLinecap="round"
                       strokeDasharray={`${Math.min(fillLen * 0.28, semiLen * 0.18)} ${semiLen + 600}`}
                       style={{ transition: 'stroke-dasharray 1.3s ease' }}/>
                   )}
@@ -345,14 +345,14 @@ export default function GestorPage() {
                   {/* Tick marks */}
                   {tks.map((tk, i) => (
                     <line key={i} x1={tk.x1} y1={tk.y1} x2={tk.x2} y2={tk.y2}
-                      stroke="rgba(255,255,255,0.2)" strokeWidth={2} strokeLinecap="round"/>
+                      stroke="rgba(var(--fg-rgb),0.2)" strokeWidth={2} strokeLinecap="round"/>
                   ))}
 
                   {/* Edge labels */}
                   <text x={cxg - Rg - swg/2 - 5} y={cyg + 16} textAnchor="end"
-                    fontSize={9} fill="rgba(255,255,255,0.28)" fontFamily="Inter,sans-serif">0%</text>
+                    fontSize={9} fill="rgba(var(--fg-rgb),0.28)" fontFamily="Inter,sans-serif">0%</text>
                   <text x={cxg + Rg + swg/2 + 5} y={cyg + 16} textAnchor="start"
-                    fontSize={9} fill="rgba(255,255,255,0.28)" fontFamily="Inter,sans-serif">100%</text>
+                    fontSize={9} fill="rgba(var(--fg-rgb),0.28)" fontFamily="Inter,sans-serif">100%</text>
                   <text x={cxg} y={cyg + 17} textAnchor="middle"
                     fontSize={10} fill={corProb} fontFamily="Inter,sans-serif" fontWeight="700">{fmtR(m.metaMensal)}</text>
 
@@ -366,10 +366,10 @@ export default function GestorPage() {
 
                   {/* Big percentage */}
                   <text x={cxg} y={cyg - 52} textAnchor="middle"
-                    fontSize={52} fontWeight={700} fill="#fff"
+                    fontSize={52} fontWeight={700} fill="var(--text)"
                     fontFamily="Sora,Inter,sans-serif" letterSpacing="-2">{pctMeta}%</text>
                   <text x={cxg} y={cyg - 24} textAnchor="middle"
-                    fontSize={9} fill="rgba(255,255,255,0.3)"
+                    fontSize={9} fill="rgba(var(--fg-rgb),0.3)"
                     fontFamily="Inter,sans-serif" letterSpacing="2">DA META ATINGIDA</text>
                 </svg>
               </div>
@@ -386,7 +386,7 @@ export default function GestorPage() {
                       <span style={{ fontSize: 10, color: 'var(--text2)' }}>{b.label}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: b.color }}>{b.val}</span>
                     </div>
-                    <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                    <div style={{ height: 3, background: 'rgba(var(--fg-rgb),0.06)', borderRadius: 2 }}>
                       <div style={{ width: `${b.pct}%`, height: '100%', background: b.color, borderRadius: 2, transition: 'width 0.8s ease' }} />
                     </div>
                   </div>
@@ -488,8 +488,8 @@ export default function GestorPage() {
                   return (
                     <div key={i} style={{
                       padding: '10px 12px', borderRadius: 10,
-                      background: isNow ? 'rgba(var(--gold-rgb),0.08)' : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${isNow ? 'rgba(var(--gold-rgb),0.2)' : 'rgba(255,255,255,0.05)'}`,
+                      background: isNow ? 'rgba(var(--gold-rgb),0.08)' : 'rgba(var(--fg-rgb),0.02)',
+                      border: `1px solid ${isNow ? 'rgba(var(--gold-rgb),0.2)' : 'rgba(var(--fg-rgb),0.05)'}`,
                     }}>
                       {/* Row top: month + receita */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
@@ -503,7 +503,7 @@ export default function GestorPage() {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                           <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
-                            <div style={{ width: `${(row.leads / maxL) * 100}%`, height: '100%', background: isNow ? 'var(--gold)' : 'rgba(255,255,255,0.25)', borderRadius: 99, transition: 'width 0.6s ease' }} />
+                            <div style={{ width: `${(row.leads / maxL) * 100}%`, height: '100%', background: isNow ? 'var(--gold)' : 'rgba(var(--fg-rgb),0.25)', borderRadius: 99, transition: 'width 0.6s ease' }} />
                           </div>
                           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>{row.leads} lead{row.leads !== 1 ? 's' : ''}</span>
                         </div>
@@ -546,7 +546,7 @@ export default function GestorPage() {
                       border: `1px solid ${motivoSel === mp.motivo ? 'rgba(239,68,68,0.3)' : 'transparent'}`,
                       transition: 'all 0.15s',
                     }}
-                    onMouseEnter={e => { if (motivoSel !== mp.motivo) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseEnter={e => { if (motivoSel !== mp.motivo) (e.currentTarget as HTMLDivElement).style.background = 'rgba(var(--fg-rgb),0.03)'; }}
                     onMouseLeave={e => { if (motivoSel !== mp.motivo) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
@@ -587,8 +587,8 @@ export default function GestorPage() {
                     return (
                       <div key={i} style={{
                         padding: '10px 12px', borderRadius: 10,
-                        background: isTop ? 'rgba(var(--gold-rgb),0.07)' : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${isTop ? 'rgba(var(--gold-rgb),0.18)' : 'rgba(255,255,255,0.05)'}`,
+                        background: isTop ? 'rgba(var(--gold-rgb),0.07)' : 'rgba(var(--fg-rgb),0.02)',
+                        border: `1px solid ${isTop ? 'rgba(var(--gold-rgb),0.18)' : 'rgba(var(--fg-rgb),0.05)'}`,
                       }}>
                         {/* Top row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
@@ -599,7 +599,7 @@ export default function GestorPage() {
                         {/* Bottom row: bar + meta */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
-                            <div style={{ width: `${(r.leads / maxL) * 100}%`, height: '100%', background: isTop ? 'var(--gold)' : 'rgba(255,255,255,0.2)', borderRadius: 99, transition: 'width 0.6s ease' }} />
+                            <div style={{ width: `${(r.leads / maxL) * 100}%`, height: '100%', background: isTop ? 'var(--gold)' : 'rgba(var(--fg-rgb),0.2)', borderRadius: 99, transition: 'width 0.6s ease' }} />
                           </div>
                           <span style={{ fontSize: 9, color: 'var(--text3)', flexShrink: 0 }}>{r.leads} lead{r.leads !== 1 ? 's' : ''}</span>
                           {(() => {
@@ -667,8 +667,8 @@ export default function GestorPage() {
                 return (
                   <div key={u.orig} style={{
                     padding: '14px 16px', borderRadius: 12,
-                    background: semRegistro ? 'rgba(255,255,255,0.02)' : 'var(--bg3)',
-                    border: `1px solid ${semRegistro ? 'rgba(255,255,255,0.05)' : 'var(--border2)'}`,
+                    background: semRegistro ? 'rgba(var(--fg-rgb),0.02)' : 'var(--bg3)',
+                    border: `1px solid ${semRegistro ? 'rgba(var(--fg-rgb),0.05)' : 'var(--border2)'}`,
                   }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: semRegistro ? 'var(--text3)' : 'var(--text)', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: semRegistro ? 'italic' : 'normal' }}>
                       {u.orig}

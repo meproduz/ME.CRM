@@ -15,8 +15,17 @@ const BASE = BRAND_COLOR_SECONDARY;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="h-full">
+    <html lang="pt-BR" className="h-full" suppressHydrationWarning>
       <head>
+        {/* Aplica o tema salvo antes do primeiro paint — sem isso a página
+            sempre nasce escura e "pisca" pro claro um instante depois,
+            pra quem já tinha escolhido claro. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var t = localStorage.getItem('mp_theme');
+            if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+          } catch (e) {}
+        ` }} />
         {BASE && (
           <style>{`:root {
             --gold: ${BASE}; --accent: ${BASE};

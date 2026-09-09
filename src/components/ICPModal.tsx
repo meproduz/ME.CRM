@@ -149,13 +149,13 @@ function RadarChart({ answers }: { answers: Required<Answers> }) {
         return (
           <polygon key={ri}
             points={rPts.map(p => p.join(',')).join(' ')}
-            fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+            fill="none" stroke="rgba(var(--fg-rgb),0.08)" strokeWidth="1" />
         );
       })}
       {/* Axes */}
       {outerPts.map((p, i) => (
         <line key={i} x1={cx} y1={cy} x2={p[0]} y2={p[1]}
-          stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          stroke="rgba(var(--fg-rgb),0.08)" strokeWidth="1" />
       ))}
       {/* Data polygon */}
       <polygon
@@ -169,7 +169,7 @@ function RadarChart({ answers }: { answers: Required<Answers> }) {
       {DIMS.map((d, i) => (
         <text key={i} x={labelPts[i][0]} y={labelPts[i][1]}
           textAnchor="middle" dominantBaseline="middle"
-          fill="#888896" style={{ fontSize: 9, fontFamily: 'Inter, sans-serif' }}>
+          fill="var(--text3)" style={{ fontSize: 9, fontFamily: 'Inter, sans-serif' }}>
           {d.label}
         </text>
       ))}
@@ -264,8 +264,8 @@ export default function ICPModal({ leadNome, existingScore, existingLabel, onCon
                         style={{
                           display: 'flex', alignItems: 'flex-start', gap: 10,
                           padding: '10px 12px',
-                          background: selected ? 'rgba(var(--gold-rgb),0.07)' : 'rgba(255,255,255,0.025)',
-                          border: `1px solid ${selected ? 'rgba(var(--gold-rgb),0.45)' : 'rgba(255,255,255,0.07)'}`,
+                          background: selected ? 'rgba(var(--gold-rgb),0.07)' : 'rgba(var(--fg-rgb),0.025)',
+                          border: `1px solid ${selected ? 'rgba(var(--gold-rgb),0.45)' : 'rgba(var(--fg-rgb),0.07)'}`,
                           borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
                         }}
                         onClick={() => setAnswers(a => ({ ...a, [d.key]: o.value }))}
@@ -273,7 +273,7 @@ export default function ICPModal({ leadNome, existingScore, existingLabel, onCon
                         <div style={{
                           width: 14, height: 14, borderRadius: '50%', flexShrink: 0, marginTop: 2,
                           background: selected ? 'var(--gold)' : 'transparent',
-                          border: `2px solid ${selected ? 'var(--gold)' : 'rgba(255,255,255,0.2)'}`,
+                          border: `2px solid ${selected ? 'var(--gold)' : 'rgba(var(--fg-rgb),0.2)'}`,
                           transition: 'all 0.15s',
                         }} />
                         <span style={{ fontSize: 12.5, color: selected ? 'var(--text)' : 'var(--text2)', lineHeight: 1.45 }}>
@@ -340,7 +340,7 @@ export default function ICPModal({ leadNome, existingScore, existingLabel, onCon
 
             {/* Recomendação */}
             <div style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+              background: 'rgba(var(--fg-rgb),0.03)', border: '1px solid rgba(var(--fg-rgb),0.07)',
               borderRadius: 8, padding: '12px 14px', fontSize: 12.5, color: 'var(--text2)',
               lineHeight: 1.6, marginBottom: 16,
             }}>
@@ -352,7 +352,7 @@ export default function ICPModal({ leadNome, existingScore, existingLabel, onCon
               {DIMS.map(d => (
                 <div key={d.key} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  fontSize: 12, padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  fontSize: 12, padding: '6px 0', borderBottom: '1px solid rgba(var(--fg-rgb),0.05)',
                 }}>
                   <span style={{ color: 'var(--text2)' }}>
                     {d.label}{d.gate > 0 ? ' (eliminatório)' : ''}

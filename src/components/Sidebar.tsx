@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCRM } from '@/store/crm-store';
 import { isStale, leadData } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/hooks/useTheme';
 import Logo from '@/components/Logo';
 
 const NAV_VENDEDOR = [
@@ -54,6 +55,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useCRM();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const urgentes = state.leads.filter(
     (l) => l.status === 'novo' || isStale(l.hist, leadData(l), l.status, l.status_changed_at, l.lastContact)
@@ -117,7 +119,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
 
         {state.currentUser?.role === 'admin' && (
           <>
-            <div className="nav-divider" style={{ margin: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }} />
+            <div className="nav-divider" style={{ margin: '8px 12px', borderTop: '1px solid rgba(var(--fg-rgb),0.07)' }} />
             {NAV_ADMIN_EXTRA.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href);
               return (
@@ -168,6 +170,19 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
             </div>
           </div>
         )}
+        <div className="nav-item theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+          <span className="nav-icon">
+            {theme === 'dark' ? (
+              <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M15.5 10.5A6.5 6.5 0 017.5 2.5a6.5 6.5 0 108 8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
+            ) : (
+              <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><circle cx="9" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.4"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.9 3.9l1.4 1.4M12.7 12.7l1.4 1.4M3.9 14.1l1.4-1.4M12.7 5.3l1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+            )}
+          </span>
+          <span className="nav-text" style={{ fontSize: '12px', color: 'var(--text3)' }}>
+            {theme === 'dark' ? 'Tema escuro' : 'Tema claro'}
+          </span>
+        </div>
+
         {state.currentUser?.role === 'admin' && (
           <div
             className={`nav-item${pathname === '/configuracoes' ? ' active' : ''}`}

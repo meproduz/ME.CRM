@@ -71,7 +71,7 @@ export default function LeadsPage() {
               const valor = getLeadValor(l);
               return (
                 <tr key={l.id} onClick={() => openLead(l.id)} style={{ cursor: 'pointer' }}>
-                  <td style={{ fontWeight: 600, color: '#fff' }}>{l.nome}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--text)' }}>{l.nome}</td>
                   <td>{l.seg || '—'}</td>
                   <td>{l.orig || '—'}</td>
                   <td>{l.int?.split(' - ')[0] || '—'}</td>

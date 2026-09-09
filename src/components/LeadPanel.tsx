@@ -284,8 +284,8 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                     onClick={() => saveICP(lead.id, t.score, t.label)}
                     style={{
                       flex: 1, padding: '8px 6px', borderRadius: 8,
-                      background: active ? t.bg : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${active ? t.color : 'rgba(255,255,255,0.08)'}`,
+                      background: active ? t.bg : 'rgba(var(--fg-rgb),0.03)',
+                      border: `1px solid ${active ? t.color : 'rgba(var(--fg-rgb),0.08)'}`,
                       color: active ? t.color : 'var(--text3)',
                       fontSize: 11.5, fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'Inter, sans-serif',
@@ -318,7 +318,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                   onClick={() => setShowICP(true)}
                   style={{
                     padding: '5px 10px', background: 'none',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(var(--fg-rgb),0.1)',
                     borderRadius: 7, color: 'var(--text3)', fontSize: 11,
                     cursor: 'pointer', fontFamily: 'Inter, sans-serif',
                   }}
@@ -534,7 +534,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                 bottom: 'calc(100% + 8px)',
                 left: 0,
                 background: '#16161f',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: '1px solid rgba(var(--fg-rgb),0.1)',
                 borderRadius: 10,
                 padding: 5,
                 minWidth: 150,
@@ -551,7 +551,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                     color: '#EFEFEF', fontSize: 12, fontWeight: 500,
                     cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(var(--fg-rgb),0.06)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -561,7 +561,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                   <span>PDF visual</span>
                 </button>
                 {/* Divider */}
-                <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '3px 8px' }} />
+                <div style={{ height: 1, background: 'rgba(var(--fg-rgb),0.06)', margin: '3px 8px' }} />
                 {/* CSV */}
                 <button
                   onClick={() => { exportLeadCSV(lead); setExportOpen(false); }}
@@ -572,7 +572,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                     color: '#EFEFEF', fontSize: 12, fontWeight: 500,
                     cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(var(--fg-rgb),0.06)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -629,8 +629,8 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
                 <button
                   style={{
                     width: '100%', padding: '10px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(var(--fg-rgb),0.04)',
+                    border: '1px solid rgba(var(--fg-rgb),0.08)',
                     borderRadius: 8, color: 'var(--text3)', fontSize: 12,
                     cursor: 'pointer', fontFamily: 'Inter, sans-serif',
                   }}
@@ -737,8 +737,8 @@ function StageStepper({ current, onSelect }: { current: LeadStatus; onSelect: (s
               style={{
                 width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: done || active ? s.color : 'rgba(255,255,255,0.06)',
-                border: active ? '2px solid #fff' : 'none',
+                background: done || active ? s.color : 'rgba(var(--fg-rgb),0.06)',
+                border: active ? '2px solid var(--bg)' : 'none',
                 boxShadow: active ? `0 0 0 3px ${s.color}55` : 'none',
                 color: done || active ? '#07050a' : 'var(--text3)',
                 fontSize: 11, fontWeight: 800, cursor: 'pointer',
@@ -748,7 +748,7 @@ function StageStepper({ current, onSelect }: { current: LeadStatus; onSelect: (s
               {done ? '✓' : i + 1}
             </button>
             {i < stages.length - 1 && (
-              <div style={{ flex: 1, height: 2, minWidth: 8, background: done ? s.color : 'rgba(255,255,255,0.08)' }} />
+              <div style={{ flex: 1, height: 2, minWidth: 8, background: done ? s.color : 'rgba(var(--fg-rgb),0.08)' }} />
             )}
           </div>
         );

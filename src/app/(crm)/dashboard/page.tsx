@@ -261,7 +261,7 @@ export default function DashboardPage() {
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <svg width="140" height="140" viewBox="0 0 140 140">
                     {/* Trilha de fundo — mais visível */}
-                    <circle cx={arcCx} cy={arcCy} r={R} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth={sw}/>
+                    <circle cx={arcCx} cy={arcCy} r={R} fill="none" stroke="rgba(var(--fg-rgb),0.09)" strokeWidth={sw}/>
                     {stats.pct > 0 && (
                       <circle cx={arcCx} cy={arcCy} r={R} fill="none" stroke="var(--gold)" strokeWidth={sw}
                         strokeDasharray={`${arcDash} ${arcCirc}`} strokeLinecap="round"
@@ -269,7 +269,7 @@ export default function DashboardPage() {
                         style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)', filter: 'drop-shadow(0 0 6px rgba(var(--gold-rgb),0.4))' }}
                       />
                     )}
-                    <text x={arcCx} y={arcCy - 4} textAnchor="middle" fontFamily="Sora,Inter,sans-serif" fontSize="22" fontWeight="700" fill="#fff">{stats.pct}%</text>
+                    <text x={arcCx} y={arcCy - 4} textAnchor="middle" fontFamily="Sora,Inter,sans-serif" fontSize="22" fontWeight="700" fill="var(--text)">{stats.pct}%</text>
                     <text x={arcCx} y={arcCy + 14} textAnchor="middle" fontFamily="Inter,sans-serif" fontSize="9" fill="#555" fontWeight="400">atingido</text>
                   </svg>
                 </div>
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                         <span style={{ fontSize: 10, color: 'var(--text2)' }}>{b.label}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: b.color }}>{b.val}</span>
                       </div>
-                      <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                      <div style={{ height: 3, background: 'rgba(var(--fg-rgb),0.06)', borderRadius: 2 }}>
                         <div style={{ width: `${b.pct}%`, height: '100%', background: b.color, borderRadius: 2, transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)' }} />
                       </div>
                     </div>
@@ -427,7 +427,7 @@ export default function DashboardPage() {
                   return (
                     <div key={col.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 80, fontSize: 10, color: col.color, fontWeight: 600, flexShrink: 0, textAlign: 'right' }}>{col.label}</div>
-                      <div style={{ flex: 1, height: 22, background: 'rgba(255,255,255,0.04)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 22, background: 'rgba(var(--fg-rgb),0.04)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${pct}%`, height: '100%', background: funnelColors[i], borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 6, transition: 'width 0.7s ease' }}>
                           {n > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>{n}</span>}
                         </div>

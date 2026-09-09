@@ -269,7 +269,7 @@ export default function ConfiguracoesPage() {
                     {col.label}
                   </div>
                   <textarea
-                    style={{ width: '100%', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 8, color: '#fff', padding: '8px 12px', fontSize: 12, resize: 'none', height: 60, fontFamily: 'Poppins' }}
+                    style={{ width: '100%', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 12, resize: 'none', height: 60, fontFamily: 'Poppins' }}
                     value={(waTemplates as any)[col.id] ?? ''}
                     onChange={(e) => setWaTemplates((t) => ({ ...t, [col.id]: e.target.value }))}
                     placeholder={`Mensagem para leads em "${col.label}"...`}

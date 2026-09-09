@@ -907,6 +907,28 @@ input:-webkit-autofill:focus {
 .card-foot  { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
 .tag        { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
 .card-int   { font-size: 9px; color: var(--text3); margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.card-int-line { font-size: 9px; color: var(--text3); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Chips do card — agrupa badges pequenos (origem, já fechado, prioridade ICP)
+   numa linha só que quebra naturalmente, em vez de cada um empilhado
+   ocupando a largura inteira do card. */
+.card-chips {
+  display: flex; flex-wrap: wrap;
+  gap: 6px; margin-top: 8px;
+}
+/* Claymorphism — canto suave (não pílula) + sombra dupla suave (clara em
+   cima/esquerda, escura embaixo/direita) pra dar aquele relevo de "argila".
+   Sem white-space:nowrap de propósito: com canto pequeno, o chip quebra em
+   2 linhas de forma limpa em vez de cortar a palavra com "...". */
+.card-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  line-height: 1.35; max-width: 100%;
+  box-shadow:
+    1px 1px 3px rgba(0,0,0,0.4),
+    -1px -1px 2px rgba(255,255,255,0.05);
+}
 
 /* ─── Badges ──────────────────────────────────────── */
 .stale-badge {

@@ -236,40 +236,29 @@ function KanbanCard({ lead, isDragging, onDragStart, onClick }: {
 
       {valor > 0 && <div className="card-valor">{fmtR(valor)}</div>}
 
-      {!isClosed && valorFechado > 0 && (
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-          padding: '2px 8px', borderRadius: 100,
-          background: 'rgba(34,197,94,0.15)', color: '#22C55E',
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
-        }}>
-          ✓ {fmtR(valorFechado)} já fechado
-        </div>
-      )}
-
-      <div className="card-foot">
-        <span className="tag" style={{ background: `${origColor}22`, color: origColor }}>
+      {/* Chips — agrupados numa linha só que quebra naturalmente, em vez de
+          cada badge empilhado ocupando a largura toda do card. */}
+      <div className="card-chips">
+        {!isClosed && valorFechado > 0 && (
+          <span className="card-chip" style={{ background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>
+            ✓ {fmtR(valorFechado)} já fechado
+          </span>
+        )}
+        <span className="card-chip" style={{ background: `${origColor}22`, color: origColor }}>
           {lead.orig || '—'}
         </span>
-        <span className="card-int">{lead.int?.split(' - ')[0] ?? '—'}</span>
-      </div>
-
-      {/* Badge ICP */}
-      {lead.icp_label && (
-        <div style={{ marginTop: 6, overflow: 'hidden' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '2px 8px', borderRadius: 100,
+        {lead.icp_label && (
+          <span className="card-chip" style={{
             background: ICP_BADGE[lead.icp_label]?.bg ?? 'rgba(100,100,100,0.1)',
             color: ICP_BADGE[lead.icp_label]?.color ?? '#888',
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
-            whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             {ICP_BADGE[lead.icp_label]?.icon} {lead.icp_label}
             {lead.icp_score != null ? ` · ${lead.icp_score}` : ''}
           </span>
-        </div>
-      )}
+        )}
+      </div>
+
+      {lead.int && <div className="card-int-line">{lead.int.split(' - ')[0]}</div>}
     </motion.div>
   );
 }

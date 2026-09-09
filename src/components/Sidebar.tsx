@@ -170,17 +170,20 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
             </div>
           </div>
         )}
-        <div className="nav-item theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+        <div className="theme-switch-row">
           <span className="nav-icon">
-            {theme === 'dark' ? (
-              <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M15.5 10.5A6.5 6.5 0 017.5 2.5a6.5 6.5 0 108 8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-            ) : (
-              <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><circle cx="9" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.4"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.9 3.9l1.4 1.4M12.7 12.7l1.4 1.4M3.9 14.1l1.4-1.4M12.7 5.3l1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-            )}
+            <svg viewBox="0 0 18 18" fill="none" width="18" height="18"><path d="M15.5 10.5A6.5 6.5 0 017.5 2.5a6.5 6.5 0 108 8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
           </span>
-          <span className="nav-text" style={{ fontSize: '12px', color: 'var(--text3)' }}>
-            {theme === 'dark' ? 'Tema escuro' : 'Tema claro'}
-          </span>
+          <span className="nav-text" style={{ fontSize: '12px', color: 'var(--text3)' }}>Tema</span>
+          <button
+            className="theme-switch"
+            role="switch"
+            aria-checked={theme === 'light'}
+            aria-label={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+            onClick={toggleTheme}
+          >
+            <span className="theme-switch-thumb" style={{ transform: theme === 'light' ? 'translateX(16px)' : 'translateX(0)' }} />
+          </button>
         </div>
 
         {state.currentUser?.role === 'admin' && (

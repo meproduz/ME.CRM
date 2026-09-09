@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { BRAND_NAME, BRAND_COLOR_SECONDARY, hexToRgbTriplet, tint, shade } from '@/lib/brand';
 
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Aplica o tema salvo antes do primeiro paint — sem isso a página
             sempre nasce escura e "pisca" pro claro um instante depois,
             pra quem já tinha escolhido claro. */}
-        <script dangerouslySetInnerHTML={{ __html: `
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('mp_theme');
             if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');

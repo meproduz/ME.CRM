@@ -110,9 +110,9 @@
   --cyan-rgb:   15,168,196;
 
   --text:    #14141C;
-  --text2:   #45455A;
-  --text3:   #75758A;
-  --text4:   #ABABBB;
+  --text2:   #333345;
+  --text3:   #4E4E68;
+  --text4:   #8A8A9E;
 
   --fg-rgb: 10,10,20;
 
@@ -341,6 +341,32 @@ input:-webkit-autofill:focus {
 .nav-item:hover {
   background: var(--bg3);
   color: var(--text);
+}
+
+.theme-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  color: var(--text2);
+}
+.theme-switch-row .nav-text { flex: 1; }
+.theme-switch {
+  width: 32px; height: 18px;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.15s;
+}
+.theme-switch-thumb {
+  position: absolute;
+  top: 1px; left: 1px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  transition: transform 0.18s ease;
 }
 
 .nav-item.active {
